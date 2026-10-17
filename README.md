@@ -71,3 +71,7 @@ Datasets are downloaded by the scripts, not stored here. Check each dataset's li
 ## Development note
 
 All numbers in `RESULTS.md` come from running these scripts locally.
+
+## License
+
+No license is granted: all rights reserved. The code is public so it can be read and reviewed.
