@@ -1,0 +1,10 @@
+.env
+.venv/
+results/
+data/
+__pycache__/
+*.npy
+*.npz
+*.jsonl
+.cache/
+.vscode/
