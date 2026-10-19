@@ -14,35 +14,55 @@ A security test environment for Jev-compatible decision models.
 | Hindi / Hinglish text | Small hand-written probes only |
 | Option-order sensitivity | Measured |
 | Threshold edge, uncertain zone | Measured |
-| Padding, split payloads | Not tested |
-| Fail-open (guard errors or times out) | Not tested |
-| Tampered replies (changed choice, score or confidence) | Not tested |
+| Tampered replies (changed choice, score or confidence) | Tested on Laya: edits that break a reply's own arithmetic are caught; consistent forgeries and replays are not (RESULTS.md, section 6) |
+| Known-answer canaries | Tested on Laya: catch blanket tampering after a random delay; beaten by an attacker who knows the canary texts |
+| Fail-open (guard errors or times out) | Tested: 17 failure modes, none ended as allow |
+| Padding, split payloads | Not tested yet |
 | Model version drift, key theft, cache poisoning | Not tested |
+
+**Tamper after the answer:** a validator, a tamper proxy, canaries and fail-closed handling. Edits that break a reply's own arithmetic are caught; consistent forgeries and replays are not, and closing that gap needs replies signed by the provider. See `RESULTS.md`.
 
 ## Important limits
 
-- **Everything was run on Laya, not on Jev.** Laya is an open model that copies Jev's API. Calling real Jev needs paid credits, and `smoke_test.py` is written but has never been run. Results about Laya do not transfer to Jev; cutoffs and error rates would have to be measured again.
+- **Everything was run on Laya, not on Jev.** Laya is an open model that copies Jev's API. Calling real Jev needs paid credits, and `smoke_test.py` is written but has never been run. Results about Laya do not transfer to Jev; cutoffs, canary answers and error rates would have to be measured again.
 - The sealed test split has 116 messages, so numbers are indicative, not precise.
 - Several hand-written test messages and the rules were written after reading earlier errors. See `RESULTS.md` for what that means for each number.
+- The tamper tests use edits I wrote, 8 messages for the proxy test and one trial per failure mode. They show what the checks catch, not what a real attacker would try.
 
 ## Setup (Windows, as used in development)
 
-The Laya server runs in its own virtual environment, separate from this project's.
+The Laya server runs in its own virtual environment, separate from this project's. Check whether your prompt starts with `PS` (PowerShell) or not (cmd): the commands for setting the key differ.
+
+Generate a key without printing it into a chat or a log:
 
 ```bat
-:: terminal 1: the local server
+python -c "import secrets; print(secrets.token_hex(16))"
+```
+
+```bat
+:: terminal 1: the local server (cmd)
 mkdir laya-server && cd laya-server
 python -m venv .venv
 .venv\Scripts\activate
 pip install "laya[serve]"
-set LAYA_API_KEY=<a long random string you generate>
+set LAYA_API_KEY=<the key>
 set LAYA_DEVICE=cpu
 set USE_TF=0
 set LAYA_PRELOAD=0
 laya-serve
 ```
 
-The server binds to all network interfaces and has no authentication unless `LAYA_API_KEY` is set. Always set it, and decline firewall prompts.
+In PowerShell, `set` does not create an environment variable. Use this instead:
+
+```powershell
+$env:LAYA_API_KEY = "<the key>"
+```
+
+The server binds to all network interfaces and has no authentication unless `LAYA_API_KEY` is set. Always set it, and decline firewall prompts. To check that the key took effect, send a request without it and expect HTTP 401:
+
+```bat
+curl.exe -s -o NUL -w "%{http_code}" -X POST http://127.0.0.1:8000/v1/systemone -H "Content-Type: application/json" -d "{}"
+```
 
 ```bat
 :: terminal 2: this project
@@ -51,9 +71,11 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Create a `.env` file (it is git-ignored) containing `LAYA_API_KEY=<the same string>`.
+Create a `.env` file (it is git-ignored) containing `LAYA_API_KEY=<the same key>`. Confirm it is ignored with `git check-ignore .env`.
 
 ## Scripts
+
+### Injection detection
 
 | Script | Purpose |
 |---|---|
@@ -65,6 +87,21 @@ Create a `.env` file (it is git-ignored) containing `LAYA_API_KEY=<the same stri
 | `rules.py`, `rules_stress.py`, `eval_combo.py` | Rules hint, its stress test, combined policies |
 | `eval_final.py`, `baselines_test.py`, `distribution_check.py` | Test-split evaluation and split comparison |
 | `embed_baseline.py`, `shortcut_check.py`, `build_v2.py`, `probes.py` | Embedding classifier, shortcut check and mixed-data version |
+
+### Tamper after the answer
+
+| Script | Needs the Laya server? | Purpose |
+|---|---|---|
+| `common.py` | n/a | Shared request code and the three typed questions |
+| `validator.py` | n/a | Checks a reply: fields, model name, range and sum, argmax, recomputed confidence. Pure functions; a malformed reply becomes a failure, never a crash |
+| `test_tamper.py` | no | Applies the edits to one real reply and prints caught / not caught against predictions |
+| `collect_raw.py` | yes | Sends 24 varied messages and saves the raw replies to `results/raw_replies.jsonl` |
+| `revalidate.py` | no | Runs the validator over the saved raw replies to look for false alarms |
+| `tamper_proxy.py` | yes (as upstream) | A proxy on port 8001 that edits live replies on purpose; the edit is chosen by a request header. Test harness only; binds to 127.0.0.1 |
+| `run_through_proxy.py` | yes | Starts the proxy, sends messages through it with each edit type, prints a caught / missed table |
+| `guard.py` | yes | Gateway guard: validates every reply, sends known-answer canaries, blocks on any error |
+| `test_canary.py` | yes | Runs the guard against blanket forgery and against forgery that spares the known canaries |
+| `test_failopen.py` | no (uses a fake server) | 17 failure modes (timeouts, HTTP errors, truncated or malformed JSON); none may end as allow. Needs `results/raw_replies.jsonl` |
 
 Datasets are downloaded by the scripts, not stored here. Check each dataset's license before reuse.
 
