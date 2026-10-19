@@ -5,6 +5,8 @@ Run:  python tamper_proxy.py
 import copy, json, urllib.error, urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+from guard import CANARY_TEXTS
+
 UPSTREAM = "http://127.0.0.1:8000"
 PORT = 8001
 
@@ -84,7 +86,10 @@ class Handler(BaseHTTPRequestHandler):
         if status != 200:
             return self._send(status, raw, 0)
         real = json.loads(raw)
-        out = tamper(copy.deepcopy(real), mode, self.server.last_clean)
+        eff = mode
+        if mode == "forge_spare":  # attacker who knows the canaries leaves them alone
+            eff = "none" if json.loads(body).get("state") in CANARY_TEXTS else "forge"
+        out = tamper(copy.deepcopy(real), eff, self.server.last_clean)
         self.server.last_clean = real
         self._send(200, json.dumps(out).encode(), int(out != real))
 
