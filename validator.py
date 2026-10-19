@@ -55,8 +55,7 @@ def _check_noul(qid, a):
     return out
 
 
-def check_reply(reply, questions):
-    """Returns a list of failure messages. Empty list = every check passed."""
+def _check_reply(reply, questions):
     if not isinstance(reply, dict) or set(reply) != TOP:
         got = sorted(reply) if isinstance(reply, dict) else type(reply).__name__
         return [f"1 fields: top-level keys are {got}"]
@@ -78,3 +77,12 @@ def check_reply(reply, questions):
             continue
         fails += _check_choice(qid, a, q) if q["type"] == "choice" else _check_noul(qid, a)
     return fails
+
+
+def check_reply(reply, questions):
+    """Returns a list of failure messages. Empty list = every check passed.
+    A malformed reply becomes a failure, never an exception."""
+    try:
+        return _check_reply(reply, questions)
+    except Exception as e:
+        return [f"0 malformed: {type(e).__name__}: {e}"]

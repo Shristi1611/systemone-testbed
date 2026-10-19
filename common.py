@@ -24,7 +24,7 @@ QUESTIONS = {
 }
 
 
-def post(url, state, extra_headers=None):
+def post(url, state, extra_headers=None, timeout=600):
     """Returns (parsed reply, response headers)."""
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {KEY}"}
     headers.update(extra_headers or {})
@@ -33,7 +33,7 @@ def post(url, state, extra_headers=None):
         data=json.dumps({"state": state, "model": "english", "questions": QUESTIONS}).encode(),
         headers=headers,
     )
-    with urllib.request.urlopen(req, timeout=600) as r:
+    with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.load(r), r.headers
 
 

@@ -24,16 +24,17 @@ def canary_ok(reply, side):
 
 
 class Guard:
-    def __init__(self, url, every=5, headers=None, seed=0):
-        self.url, self.every, self.headers = url, every, headers or {}
+    def __init__(self, url, every=5, headers=None, seed=0, timeout=600):
+        self.url, self.every, self.headers, self.timeout = url, every, headers or {}, timeout
         self.rng = random.Random(seed)
         self.tripped = None  # set once a canary fails; everything after is blocked
 
     def _call(self, text):
-        return post(self.url, text, self.headers)[0]
+        return post(self.url, text, self.headers, self.timeout)[0]
 
     def ask(self, text):
-        """Returns (decision, reply, reason). decision is "allow" or "block". Fails closed."""
+        """Returns (decision, reply, reason). decision is "allow" or "block".
+        Fails closed: any error anywhere, including in the checks, is a block."""
         if self.tripped:
             return "block", None, f"tripped earlier: {self.tripped}"
         try:
@@ -45,9 +46,9 @@ class Guard:
                     self.tripped = bad[0] if bad else f"canary {ctext[:25]!r} answered wrongly"
                     return "block", None, self.tripped
             reply = self._call(text)
+            fails = check_reply(reply, QUESTIONS)
         except Exception as e:  # timeout, refused, non-200, bad JSON: never allow
             return "block", None, f"{type(e).__name__}: {e}"
-        fails = check_reply(reply, QUESTIONS)
         if fails:
             return "block", None, fails[0]
         return "allow", reply, ""
