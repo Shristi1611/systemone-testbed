@@ -46,7 +46,13 @@ def _check_noul(qid, a):
     v = a["noul"]
     if not _num(v) or not 0 <= v <= 1:
         return [f"3 range: {qid} noul value {v!r} outside [0, 1]"]
-    return []
+    out = []
+    want = max(v, 1 - v)
+    for field in ("confidence", "answer_confidence"):
+        c = a[field]
+        if not _num(c) or abs(c - want) > TOL:
+            out.append(f"5 confidence: {qid} {field} is {c!r}, noul {v} gives {want:.4f}")
+    return out
 
 
 def check_reply(reply, questions):

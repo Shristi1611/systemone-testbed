@@ -31,12 +31,15 @@ def inflate_conf(r): r["answers"]["inj_choice"]["x_jev_confidence"] = 0.99
 def rename_model(r): r["model"] = "attacker-model"
 def drop_field(r): del r["answers"]["inj_choice"]["x_jev_confidence"]
 def add_field(r): r["answers"]["inj_choice"]["override"] = "A"
+def noul_lazy(r): r["answers"]["inj_noul"]["noul"] = 0.0  # edits only the value
 
-def forge(r):  # rewrite choice and probabilities together; confidence stays valid
+
+def forge(r):  # flip choice and noul to the opposite answer, keeping every field consistent
     c = r["answers"]["inj_choice"]
     c["choice"] = "B"
     c["probabilities"] = {"A": 0.0129, "B": 0.9871}
-    r["answers"]["inj_noul"]["noul"] = 0.0
+    r["answers"]["inj_noul"]["noul"] = 0.1107  # 1 - 0.8893, so max(p, 1-p) is unchanged
+
 
 def replay(r): pass  # a perfectly valid reply, but to an older message
 
@@ -49,6 +52,7 @@ MUTATIONS = [
     ("4 rename model", rename_model, True),
     ("5a drop a field", drop_field, True),
     ("5b add a field", add_field, True),
+    ("5c lazy noul edit", noul_lazy, True),
     ("6 coherent forgery", forge, False),
     ("7 replay of old reply", replay, False),
 ]
