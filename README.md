@@ -15,9 +15,10 @@ A security test environment for Jev-compatible decision models.
 | Option-order sensitivity | Measured |
 | Threshold edge, uncertain zone | Measured |
 | Tampered replies (changed choice, score or confidence) | Tested on Laya: edits that break a reply's own arithmetic are caught; consistent forgeries and replays are not (RESULTS.md, section 6) |
-| Known-answer canaries | Tested on Laya: catch blanket tampering after a random delay; beaten by an attacker who knows the canary texts |
+| Known-answer canaries | Tested on Laya: catch blanket tampering after a delay (at most 9 requests with the block schedule); beaten by an attacker who knows the canary texts |
 | Fail-open (guard errors or times out) | Tested: 17 failure modes, none ended as allow |
-| Padding, split payloads | Not tested yet |
+| Padding (long inputs) | Tested on Laya: it silently drops everything after about 474 tokens, hiding an attack placed later; a windowed scan recovers it (RESULTS.md, section 7) |
+| Split payloads | Four hand-made splits, no evasion shown; a test with innocent-looking fragments is still to do |
 | Model version drift, key theft, cache poisoning | Not tested |
 
 **Tamper after the answer:** a validator, a tamper proxy, canaries and fail-closed handling. Edits that break a reply's own arithmetic are caught; consistent forgeries and replays are not, and closing that gap needs replies signed by the provider. See `RESULTS.md`.
@@ -99,9 +100,15 @@ Create a `.env` file (it is git-ignored) containing `LAYA_API_KEY=<the same key>
 | `revalidate.py` | no | Runs the validator over the saved raw replies to look for false alarms |
 | `tamper_proxy.py` | yes (as upstream) | A proxy on port 8001 that edits live replies on purpose; the edit is chosen by a request header. Test harness only; binds to 127.0.0.1 |
 | `run_through_proxy.py` | yes | Starts the proxy, sends messages through it with each edit type, prints a caught / missed table |
-| `guard.py` | yes | Gateway guard: validates every reply, sends known-answer canaries, blocks on any error |
-| `test_canary.py` | yes | Runs the guard against blanket forgery and against forgery that spares the known canaries |
+| `guard.py` | yes | Gateway guard: validates every reply, sends known-answer canaries (random or one per block of 5 requests), blocks on any error |
+| `test_canary.py` | yes | Runs the guard under both canary schedules against blanket forgery and against forgery that spares the known canaries |
 | `test_failopen.py` | no (uses a fake server) | 17 failure modes (timeouts, HTTP errors, truncated or malformed JSON); none may end as allow. Needs `results/raw_replies.jsonl` |
+
+### Long inputs and split payloads
+
+| Script | Needs the Laya server? | Purpose |
+|---|---|---|
+| `test_padding.py` | yes | Places an attack before, in and after long harmless filler (single call vs windowed scan), then splits attacks into fragments and scores the fragments and the joined text |
 
 Datasets are downloaded by the scripts, not stored here. Check each dataset's license before reuse.
 
