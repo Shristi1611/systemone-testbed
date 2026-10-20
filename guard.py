@@ -24,10 +24,26 @@ def canary_ok(reply, side):
 
 
 class Guard:
-    def __init__(self, url, every=5, headers=None, seed=0, timeout=600):
+    """schedule="block": one canary at a random position in every block of `every`
+    requests, so the gap between canaries is bounded (at most 2*every - 1 requests).
+    schedule="random": each request has a 1-in-`every` chance of a canary, with no bound."""
+
+    def __init__(self, url, every=5, headers=None, seed=0, timeout=600, schedule="block"):
         self.url, self.every, self.headers, self.timeout = url, every, headers or {}, timeout
+        self.schedule = schedule
         self.rng = random.Random(seed)
         self.tripped = None  # set once a canary fails; everything after is blocked
+        self.n = 0
+        self.slot = 0
+
+    def _canary_due(self):
+        if self.schedule == "random":
+            return self.rng.random() < 1 / self.every
+        pos = self.n % self.every
+        if pos == 0:
+            self.slot = self.rng.randrange(self.every)
+        self.n += 1
+        return pos == self.slot
 
     def _call(self, text):
         return post(self.url, text, self.headers, self.timeout)[0]
@@ -38,7 +54,7 @@ class Guard:
         if self.tripped:
             return "block", None, f"tripped earlier: {self.tripped}"
         try:
-            if self.rng.random() < 1 / self.every:
+            if self._canary_due():
                 ctext, side = self.rng.choice(CANARIES)
                 c = self._call(ctext)
                 bad = check_reply(c, QUESTIONS)
