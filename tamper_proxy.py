@@ -5,7 +5,10 @@ Run:  python tamper_proxy.py
 import copy, json, urllib.error, urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from guard import CANARY_TEXTS
+from guard import CANARY_TEXTS as _OLD_CANARY_TEXTS
+from gateway import CANARIES as _GATEWAY_CANARIES
+
+CANARY_TEXTS = set(_OLD_CANARY_TEXTS) | {t for t, _ in _GATEWAY_CANARIES}
 
 UPSTREAM = "http://127.0.0.1:8000"
 PORT = 8001
