@@ -19,9 +19,10 @@ A security test environment for Jev-compatible decision models.
 | Fail-open (guard errors or times out) | Tested: 17 failure modes, none ended as allow |
 | Padding (long inputs) | Tested on Laya: it silently drops everything after about 474 tokens, hiding an attack placed later; a windowed scan recovers it (RESULTS.md, section 7) |
 | Split payloads | Four hand-made splits, no evasion shown; a test with innocent-looking fragments is still to do |
+| Gateway (rules, validated scoring, windows, canaries) | Built on the multilingual model and demonstrated on hand-picked messages; not yet evaluated on held-out data; no embedding classifier and no reviewer for "escalate" yet (RESULTS.md, section 8) |
 | Model version drift, key theft, cache poisoning | Not tested |
 
-**Tamper after the answer:** a validator, a tamper proxy, canaries and fail-closed handling. Edits that break a reply's own arithmetic are caught; consistent forgeries and replays are not, and closing that gap needs replies signed by the provider. See `RESULTS.md`.
+**Tamper after the answer:** a validator, a tamper proxy, canaries and fail-closed handling. Edits that break a reply's own arithmetic are caught; consistent forgeries and replays are not, and closing that gap needs replies signed by the provider. In the gateway, a forged reply cannot turn an attack that the rules recognise into "allow" (it drops to escalate at worst), but it can for an attack the rules miss. See `RESULTS.md`.
 
 ## Important limits
 
@@ -29,6 +30,8 @@ A security test environment for Jev-compatible decision models.
 - The sealed test split has 116 messages, so numbers are indicative, not precise.
 - Several hand-written test messages and the rules were written after reading earlier errors. See `RESULTS.md` for what that means for each number.
 - The tamper tests use edits I wrote, 8 messages for the proxy test and one trial per failure mode. They show what the checks catch, not what a real attacker would try.
+- The gateway results are demonstrations on 12 hand-picked messages. "Escalate" has no reviewer, so it is currently undecided, not safe.
+- The tamper and padding tests used Laya's English model; the injection-detection results and the gateway use the multilingual model.
 
 ## Setup (Windows, as used in development)
 
@@ -98,9 +101,10 @@ Create a `.env` file (it is git-ignored) containing `LAYA_API_KEY=<the same key>
 | `test_tamper.py` | no | Applies the edits to one real reply and prints caught / not caught against predictions |
 | `collect_raw.py` | yes | Sends 24 varied messages and saves the raw replies to `results/raw_replies.jsonl` |
 | `revalidate.py` | no | Runs the validator over the saved raw replies to look for false alarms |
+| `check_multilingual.py` | yes | Runs the validator on replies from the multilingual model |
 | `tamper_proxy.py` | yes (as upstream) | A proxy on port 8001 that edits live replies on purpose; the edit is chosen by a request header. Test harness only; binds to 127.0.0.1 |
 | `run_through_proxy.py` | yes | Starts the proxy, sends messages through it with each edit type, prints a caught / missed table |
-| `guard.py` | yes | Gateway guard: validates every reply, sends known-answer canaries (random or one per block of 5 requests), blocks on any error |
+| `guard.py` | yes | Guard for the English-model questions: validates every reply, sends known-answer canaries (random or one per block of 5 requests), blocks on any error |
 | `test_canary.py` | yes | Runs the guard under both canary schedules against blanket forgery and against forgery that spares the known canaries |
 | `test_failopen.py` | no (uses a fake server) | 17 failure modes (timeouts, HTTP errors, truncated or malformed JSON); none may end as allow. Needs `results/raw_replies.jsonl` |
 
@@ -109,6 +113,16 @@ Create a `.env` file (it is git-ignored) containing `LAYA_API_KEY=<the same key>
 | Script | Needs the Laya server? | Purpose |
 |---|---|---|
 | `test_padding.py` | yes | Places an attack before, in and after long harmless filler (single call vs windowed scan), then splits attacks into fragments and scores the fragments and the joined text |
+
+### Gateway (multilingual model)
+
+| Script | Needs the Laya server? | Purpose |
+|---|---|---|
+| `gateway.py` | yes | Rules, validated guard scoring (two wordings x two option orders), windowed scan of long text, allow / escalate / block zones, canaries and fail-closed handling |
+| `try_gateway.py` | yes | Six demonstration cases through the gateway |
+| `measure_canaries.py`, `measure_canaries2.py` | yes | Measure the gateway's scores for canary candidates |
+| `test_gateway_canary.py` | yes | Runs the gateway's canaries through the tamper proxy against blanket forgery and forgery that spares the canaries |
+| `show_forged.py` | yes | Prints each message's decision untampered and under a forged reply |
 
 Datasets are downloaded by the scripts, not stored here. Check each dataset's license before reuse.
 
