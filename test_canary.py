@@ -19,13 +19,17 @@ SCENARIOS = [
     ("forge, spare the canaries", "forge_spare"),
 ]
 
-print(f"{len(messages)} requests per run, canary about 1 in 5, 10 runs per scenario\n")
-for name, mode in SCENARIOS:
-    allowed_counts, tripped = [], 0
-    for seed in range(10):
-        g = Guard(PROXY, every=5, headers={"X-Tamper-Mode": mode}, seed=seed)
-        allowed = sum(g.ask(m)[0] == "allow" for m in messages)
-        allowed_counts.append(allowed)
-        tripped += g.tripped is not None
-    print(f"{name:28} allowed {min(allowed_counts):>2} to {max(allowed_counts):>2} "
-          f"of {len(messages)}   canary tripped in {tripped}/10 runs")
+print(f"{len(messages)} requests per run, one canary per 5 requests, 10 runs per scenario\n")
+for schedule in ("random", "block"):
+    print(f"canary schedule: {schedule}")
+    for name, mode in SCENARIOS:
+        allowed_counts, tripped = [], 0
+        for seed in range(10):
+            g = Guard(PROXY, every=5, headers={"X-Tamper-Mode": mode}, seed=seed,
+                      schedule=schedule)
+            allowed = sum(g.ask(m)[0] == "allow" for m in messages)
+            allowed_counts.append(allowed)
+            tripped += g.tripped is not None
+        print(f"  {name:28} allowed {min(allowed_counts):>2} to {max(allowed_counts):>2} "
+              f"of {len(messages)}   canary tripped in {tripped}/10 runs")
+    print()
