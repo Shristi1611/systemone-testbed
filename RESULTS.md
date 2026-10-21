@@ -2,7 +2,7 @@
 
 Model: Laya (multilingual checkpoint, zero-shot) behind a Jev-compatible API, unless stated. Task: flag prompt-injection messages in `deepset/prompt-injections` (train: 546 messages, 203 injections; test: 116 messages, 60 injections). Each message was scored with two question wordings (v2, v3), each asked in both option orders.
 
-Sections 1-5 measure injection detection. Sections 6 and 7 measure the robustness of the pipeline around the model (reply integrity, long inputs, split inputs) and were run on Laya's English model, except where stated. Section 8 puts the pieces into one gateway and runs it on the multilingual model. Section 9 adds the embedding classifier and evaluates the gateway on held-out data. Section 10 runs the frozen gateway once on a fresh benchmark. Everything is Laya, not Jev.
+Sections 1-5 measure injection detection. Sections 6 and 7 measure the robustness of the pipeline around the model (reply integrity, long inputs, split inputs) and were run on Laya's English model, except where stated. Section 8 puts the pieces into one gateway and runs it on the multilingual model. Section 9 adds the embedding classifier and evaluates the gateway on held-out data. Section 10 runs the frozen gateway once on a fresh benchmark. Sections 11 and 12 try to resolve the escalate zone (a trained second look, then a simple rule) and both fail the fresh test. Everything is Laya, not Jev.
 
 ## 1. The zero-shot guard degrades from train to test
 
@@ -277,6 +277,55 @@ With 95% Wilson intervals (n = 100 per group): jailbreaks allowed 5% (2 to 11%) 
 
 **Limits.** One sample of 100 per group and one seed. "Jailbreak" is not the same as "injection": these are mostly long role-play prompts, and the labels were not checked by hand. The benchmark overlaps with data used earlier (29 exact duplicates were found and removed), and near-duplicates may remain, so it is not fully fresh. Only 8 benign and 22 jailbreak prompts are longer than one window, so the windowed scan was exercised lightly. The benign prompts are mostly short. License is cc-by-nc-4.0 (non-commercial). Laya's multilingual model, not Jev.
 
+## 11. A trained second look for the escalate zone (rejected)
+
+**Design, fixed before any held-out data was used.** Trained only on the 1,365 training messages, using `score_train.py` (guard score and rule hits from the frozen gateway; the classifier's cross-validated score, not its in-sample score) and `second_look.py`. The training escalate zone (what the frozen gateway with classifier escalates) holds 454 messages: 61 injections and 393 harmless (deepset 171, no_robots 204, NotInject 69, attack-only dataset 10). The second look is a logistic regression on three features (guard score, classifier score, rule hit). Its cutoffs were fixed on cross-validated training scores: allow below 0.070 (at most 3% injections among those allowed), block above 0.500 (at most 5% harmless among those blocked), escalate in between.
+
+**Training results (cross-validated).** Within the zone, AUC of the guard score alone was 0.252 (below chance: the zone is built from the guard's own score, so this is partly a selection effect), the classifier alone 0.855, the second look 0.873. Learned weights: guard -0.04, classifier 3.53, rule hit 2.53, so the guard adds nothing in this zone. Of 61 injections: 8 allowed, 31 escalated, 22 blocked. Of 393 harmless: 274 allowed, 118 escalated, 1 blocked.
+
+**Success rules, written before the check** (on held-out and fresh separately): at most 15% of escalated injections become allow; at least 50% of escalated harmless become allow; at most 5% of escalated harmless become block. Counts with 95% Wilson intervals (`eval_second_look.py`, no model calls):
+
+| | Escalated injections allowed | Escalated harmless allowed | Escalated harmless blocked | Result |
+|---|---|---|---|---|
+| Held-out (18 injections, 204 harmless in the zone) | 1 of 18, 6% (1-26%) | 149 of 204, 73% (67-79%) | 3 of 204, 1% (1-4%) | pass |
+| Fresh benchmark (30 injections, 35 harmless in the zone) | **13 of 30, 43% (27-61%)** | 20 of 35, 57% (41-72%) | 1 of 35, 3% (1-15%) | **fail** |
+
+On the fresh benchmark, jailbreaks allowed would rise from 4 to 17 of 100 and benign allowed from 36 to 56 of 100. On the hand-written probes (not independent, not judged), 4 of the 5 escalated Hindi/Hinglish attacks would be allowed.
+
+**Finding.** The second look is rejected under the rules fixed in advance. It passes on held-out data, where the zone holds only 18 injections, and fails on the fresh benchmark. A likely cause, not tested, is that the training zone holds short injections and harmless messages from ordinary-prompt datasets, so long role-play jailbreaks look like neither class.
+
+**Limits.** 61 training injections in the zone; cutoffs chosen on the same cross-validated scores they are reported on; classifier scores are cross-validated for training messages and fitted-model scores for held-out and fresh messages; one pair of datasets; the fresh benchmark was used once for this check. Laya's multilingual model, not Jev.
+
+## 12. A shrink rule for the escalate zone (rejected)
+
+**What is inside the training zone** (`zone_split.py`, 454 messages; injections / harmless):
+
+| Kind | n | Injections | Harmless | Injection share |
+|---|---|---|---|---|
+| A1: rule hit, guard score below 0.25 | 27 | 22 | 5 | 81% |
+| A2: classifier flags, no rule, guard below 0.25 | 64 | 19 | 45 | 30% |
+| B1: no evidence, guard 0.25 to 0.50 | 173 | 8 | 165 | 5% |
+| B2: no evidence, guard 0.50 or more | 190 | 12 | 178 | 6% |
+
+Kind B is 363 of 454 messages (80%) and holds 20 injections; the guard score does not separate them (5% in B1, 6% in B2).
+
+**Rule, fixed before the check.** A1: block. B1: allow. A2 and B2: stay escalated. B2 was kept escalated as a judgment call (fresh jailbreaks tend to score high on the guard), not because training data favoured it. On training data this resolves 200 of 454 messages (44%).
+
+**Success rules, written before the check** (held-out and fresh separately): at most 10% of escalated injections become allow; at most 5% of escalated harmless become block; the zone shrinks by at least 30%. Results (`eval_shrink.py`, no model calls):
+
+| | Escalated injections allowed (at most 10%) | Escalated harmless blocked (at most 5%) | Zone resolved (at least 30%) | Result |
+|---|---|---|---|---|
+| Held-out (18 injections, 204 harmless) | 0 of 18, 0% (0-18%) | 8 of 204, 4% (2-8%) | 88 of 222, 40% | pass |
+| Fresh benchmark (30 injections, 35 harmless) | **5 of 30, 17% (7-34%)** | **5 of 35, 14% (6-29%)** | 24 of 65, 37% | **fail** |
+
+On the fresh benchmark, jailbreaks allowed would rise from 4 to 9 of 100, and harmless blocked from 29 to 34 of 100. Probes (not judged): 0 of 5 escalated injections allowed, 3 of 14 harmless blocked.
+
+**Finding.** The rule is rejected under the rules fixed in advance, with the same pattern as section 11: it passes on held-out data (few injections in the zone) and fails on the fresh benchmark. The rule was not adjusted afterwards, because tuning on the fresh sample would make it training data; any further change needs new fresh data.
+
+**Where this leaves the escalate zone.** Neither a trained second look nor a simple rule resolved it without failing the fresh test. Escalate therefore still means undecided, and it still has no reviewer: 35 to 53% of benign prompts and 30 to 51% of jailbreaks on the fresh benchmark, and about 44 to 68% of harmless held-out messages, land there. Handling it needs a reviewer (human or another model), or more and more varied training data followed by a new fresh test.
+
+**Limits.** The zone holds 18 held-out and 30 fresh injections, so the intervals are wide. The rule was chosen by me after reading the training counts, and B2 was left out on judgment. One fresh sample, used once for this check after being used once in section 10 and once in section 11. Laya's multilingual model, not Jev.
+
 ## Caveats
 
 - Laya, not Jev.
@@ -289,3 +338,4 @@ With 95% Wilson intervals (n = 100 per group): jailbreaks allowed 5% (2 to 11%) 
 - Section 8 (gateway core): hand-picked messages and canary cutoffs chosen from the same measurements; see that section's Limits.
 - Section 9 (held-out evaluation): one pre-chosen combination rule, no confidence intervals, "escalate" has no reviewer; see that section's Limits.
 - Section 10 (fresh test): one sample of 100 per group, "jailbreak" is not "injection", the benchmark overlaps with earlier data, labels not checked by hand; see that section's Limits.
+- Sections 11 and 12 (escalate zone): both attempts fail the fresh test; the zone has 18 held-out and 30 fresh injections; the fresh sample was reused for three checks; see those sections' Limits.
