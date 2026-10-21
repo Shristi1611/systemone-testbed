@@ -2,7 +2,7 @@
 
 Model: Laya (multilingual checkpoint, zero-shot) behind a Jev-compatible API, unless stated. Task: flag prompt-injection messages in `deepset/prompt-injections` (train: 546 messages, 203 injections; test: 116 messages, 60 injections). Each message was scored with two question wordings (v2, v3), each asked in both option orders.
 
-Sections 1-5 measure injection detection. Sections 6 and 7 measure the robustness of the pipeline around the model (reply integrity, long inputs, split inputs) and were run on Laya's English model, except where stated. Section 8 puts the pieces into one gateway and runs it on the multilingual model. Section 9 adds the embedding classifier and evaluates the gateway on held-out data. Everything is Laya, not Jev.
+Sections 1-5 measure injection detection. Sections 6 and 7 measure the robustness of the pipeline around the model (reply integrity, long inputs, split inputs) and were run on Laya's English model, except where stated. Section 8 puts the pieces into one gateway and runs it on the multilingual model. Section 9 adds the embedding classifier and evaluates the gateway on held-out data. Section 10 runs the frozen gateway once on a fresh benchmark. Everything is Laya, not Jev.
 
 ## 1. The zero-shot guard degrades from train to test
 
@@ -258,6 +258,25 @@ The 20 would be 24, but one of the 12 messages (the recipe question) is also a r
 
 **Limits.** The deepset test split has been looked at before this evaluation. The NotInject split is by hash of each prompt, so near-duplicates may sit on both sides and the NotInject figures may be optimistic. The hand-written probes were written after seeing earlier results and are not independent; several groups have 4 to 22 messages. Only one combination rule was tried, and it was chosen before looking at these numbers; changing the cutoffs or the rule now would have to be judged on a fresh held-out set. No confidence intervals are given. Laya's multilingual model, not Jev.
 
+## 10. Fresh test of the frozen gateway
+
+**Setup.** The gateway was frozen before this test (git tag `frozen-before-fresh-test`): same rules, classifier, cutoffs (guard 0.25 / 0.50, classifier 0.45) and combination rule as section 9. Nothing was changed after seeing these numbers. Data: `rogue-security/prompt-injections-benchmark` (5,000 rows, one `test` split, labels `benign` and `jailbreak`, license cc-by-nc-4.0, gated; provenance not documented). `eval_fresh.py` removed 29 exact duplicates of text already used anywhere in this project (case and spacing normalised) and prompts longer than 8,000 characters (2), then sampled 100 benign and 100 jailbreak prompts with seed 21. All 200 were scored once with no errors, on the multilingual model. Counts are allow / escalate / block:
+
+| Group | n | Median characters | Longer than one window | Guard + rules | + classifier |
+|---|---|---|---|---|---|
+| benchmark: benign | 100 | 338 | 8 | 36 / 53 / 11 | 36 / 35 / 29 |
+| benchmark: jailbreak | 100 | 786 | 22 | 5 / 51 / 44 | 4 / 30 / 66 |
+
+With 95% Wilson intervals (n = 100 per group): jailbreaks allowed 5% (2 to 11%) and 4% (2 to 10%); jailbreaks blocked 44% (35 to 54%) and 66% (56 to 75%); benign allowed 36% (27 to 46%); benign blocked 11% (6 to 19%) and 29% (21 to 39%); benign escalated 53% (43 to 62%) and 35% (26 to 45%); jailbreaks escalated 51% (41 to 61%) and 30% (22 to 40%).
+
+**Findings.**
+- Allow separates the groups: 36% of benign prompts are allowed against 4 to 5% of jailbreaks, and the classifier does not change the benign figure.
+- The classifier repeats the trade-off of section 9: jailbreaks blocked rise from 44 to 66, and benign blocked rise from 11 to 29. The intervals for the two benign block rates (6 to 19% and 21 to 39%) do not overlap.
+- Escalate does not separate the groups. 35 to 53% of benign prompts and 30 to 51% of jailbreaks land there, so escalate still means "undecided" and has no reviewer.
+- The guess written down before the run, that most jailbreaks would be blocked, held with the classifier (66 of 100) and not for guard + rules (44 of 100).
+
+**Limits.** One sample of 100 per group and one seed. "Jailbreak" is not the same as "injection": these are mostly long role-play prompts, and the labels were not checked by hand. The benchmark overlaps with data used earlier (29 exact duplicates were found and removed), and near-duplicates may remain, so it is not fully fresh. Only 8 benign and 22 jailbreak prompts are longer than one window, so the windowed scan was exercised lightly. The benign prompts are mostly short. License is cc-by-nc-4.0 (non-commercial). Laya's multilingual model, not Jev.
+
 ## Caveats
 
 - Laya, not Jev.
@@ -269,3 +288,4 @@ The 20 would be 24, but one of the 12 messages (the recipe question) is also a r
 - Section 7 (long inputs, split payloads): English model only, one attack sentence, one filler sentence and six hand-written split cases; see that section's Limits.
 - Section 8 (gateway core): hand-picked messages and canary cutoffs chosen from the same measurements; see that section's Limits.
 - Section 9 (held-out evaluation): one pre-chosen combination rule, no confidence intervals, "escalate" has no reviewer; see that section's Limits.
+- Section 10 (fresh test): one sample of 100 per group, "jailbreak" is not "injection", the benchmark overlaps with earlier data, labels not checked by hand; see that section's Limits.
