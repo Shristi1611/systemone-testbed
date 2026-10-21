@@ -19,7 +19,9 @@ A security test environment for Jev-compatible decision models.
 | Fail-open (guard errors or times out) | Tested: 17 failure modes, none ended as allow |
 | Padding (long inputs) | Tested on Laya: it silently drops everything after about 474 tokens, hiding an attack placed later; a windowed scan recovers it (RESULTS.md, section 7) |
 | Split payloads | Four hand-made splits, no evasion shown; a test with innocent-looking fragments is still to do |
-| Gateway (rules, embedding classifier, validated scoring, windows, canaries) | Built on the multilingual model and evaluated on held-out groups (RESULTS.md, sections 8 and 9). The classifier cuts missed injections on the deepset test split from 14 to 3 of 60 but blocks more harmless messages. About half of harmless messages are escalated, and "escalate" has no reviewer yet |
+| Gateway (rules, embedding classifier, validated scoring, windows, canaries) | Built on the multilingual model and evaluated on held-out groups (RESULTS.md, sections 8 and 9). The classifier cuts missed injections on the deepset test split from 14 to 3 of 60 but blocks more harmless messages. About half of harmless messages are escalated, and "escalate" has no reviewer yet. On a fresh benchmark the same pattern held (section 10) |
+| Fresh test of the frozen gateway | Run once on 200 prompts from a public benchmark (RESULTS.md, section 10): about 36% of benign prompts allowed against 4 to 5% of jailbreaks; the classifier blocks more of both (benign blocked 11% to 29%, jailbreaks blocked 44% to 66%) |
+| Resolving the escalate zone | Two attempts, a trained second look and a simple shrink rule, both passed on held-out data and failed on the fresh benchmark, so neither is adopted (RESULTS.md, sections 11 and 12). Escalate is still undecided and still has no reviewer |
 | Model version drift, key theft, cache poisoning | Not tested |
 
 **Tamper after the answer:** a validator, a tamper proxy, canaries and fail-closed handling. Edits that break a reply's own arithmetic are caught; consistent forgeries and replays are not, and closing that gap needs replies signed by the provider. In the gateway, a forged reply cannot turn an attack that the rules recognise into "allow" (it drops to escalate at worst), but it can for an attack the rules miss. See `RESULTS.md`.
@@ -31,6 +33,7 @@ A security test environment for Jev-compatible decision models.
 - Several hand-written test messages and the rules were written after reading earlier errors. See `RESULTS.md` for what that means for each number.
 - The tamper tests use edits I wrote, 8 messages for the proxy test and one trial per failure mode. They show what the checks catch, not what a real attacker would try.
 - The gateway's held-out numbers come from one pre-chosen combination rule, with no confidence intervals. The deepset test split had been looked at, and several probe groups have only 4 to 22 messages. "Escalate" has no reviewer, so it is currently undecided, not safe.
+- The fresh test uses 100 benign and 100 jailbreak prompts from one benchmark, one sample and one seed. "Jailbreak" is not the same as "injection", and the benchmark overlaps with data used earlier. The two escalate-zone attempts were judged against rules fixed beforehand and rejected; the fresh sample has been used for three checks and should not be used again for tuning (sections 10 to 12).
 - The tamper and padding tests used Laya's English model; the injection-detection results and the gateway use the multilingual model.
 
 ## Setup (Windows, as used in development)
@@ -78,6 +81,14 @@ pip install -r requirements.txt
 Create a `.env` file (it is git-ignored) containing `LAYA_API_KEY=<the same key>`. Confirm it is ignored with `git check-ignore .env`.
 
 The embedding classifier needs [Ollama](https://ollama.com) running with the `nomic-embed-text` model (`ollama pull nomic-embed-text`). The gateway needs it; if Ollama is down the gateway blocks every request. Train and save the classifier once with `python train_classifier.py`; it writes `results/clf_mixed.joblib`, which is git-ignored.
+
+The fresh-test scripts use `rogue-security/prompt-injections-benchmark`, a gated dataset on Hugging Face. Accept its terms on the dataset page while logged in, create a read token at huggingface.co/settings/tokens, and set it in the same window before running (PowerShell, keep the quotes):
+
+```powershell
+$env:HF_TOKEN = "<your token>"
+```
+
+Never commit the token. The dataset is licensed cc-by-nc-4.0 (non-commercial).
 
 ## Scripts
 
@@ -127,6 +138,17 @@ The embedding classifier needs [Ollama](https://ollama.com) running with the `no
 | `test_gateway_canary.py` | yes | Runs the gateway's canaries through the tamper proxy against blanket forgery and forgery that spares the canaries |
 | `show_forged.py` | yes | Prints each message's decision untampered and under a forged reply |
 | `eval_gateway.py` | yes (and Ollama) | Evaluates the gateway on held-out groups with and without the classifier; caches scores in `results/gw_cache.jsonl` |
+
+### Fresh test and escalate zone
+
+| Script | Needs the Laya server? | Purpose |
+|---|---|---|
+| `eval_fresh.py` | yes (and Ollama) | Samples 100 benign and 100 jailbreak prompts (seed 21) from the benchmark after removing duplicates of data used earlier; runs the frozen gateway with and without the classifier; shares `results/gw_cache.jsonl` |
+| `score_train.py` | yes | Scores the 1,365 training messages once (guard and rules, plus the classifier's cross-validated score) into `results/train_scores.jsonl`; resumable |
+| `second_look.py` | no | Trains the learned second look for the escalate zone on training data only and fixes its cutoffs |
+| `eval_second_look.py` | no | One-time check of the second look on held-out and fresh data against rules fixed beforehand (fails on fresh data) |
+| `zone_split.py` | no | Counts what is inside the training escalate zone, by kind |
+| `eval_shrink.py` | no | One-time check of the shrink rule on held-out and fresh data (fails on fresh data) |
 
 Datasets are downloaded by the scripts, not stored here. Check each dataset's license before reuse.
 
