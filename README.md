@@ -11,20 +11,25 @@ A security test environment for Jev-compatible decision models.
 | Track | Status |
 |---|---|
 | Steering text (prompt-injection detection) | Measured on a public dataset |
-| Hindi / Hinglish text | Small hand-written probes only |
+| Hindi / Hinglish text | 50 hand-written messages, not reviewed by a native reader: Hinglish attacks were all blocked, but Devanagari attacks were mostly only escalated (1 of 10 blocked) because the classifier and rules are weak on Devanagari (RESULTS.md, section 15) |
 | Option-order sensitivity | Measured |
 | Threshold edge, uncertain zone | Measured |
 | Tampered replies (changed choice, score or confidence) | Tested on Laya: edits that break a reply's own arithmetic are caught; consistent forgeries and replays are not (RESULTS.md, section 6) |
 | Known-answer canaries | Tested on Laya: catch blanket tampering after a delay (at most 9 requests with the block schedule); beaten by an attacker who knows the canary texts |
 | Fail-open (guard errors or times out) | Tested: 17 failure modes, none ended as allow |
-| Padding (long inputs) | Tested on Laya: it silently drops everything after about 474 tokens, hiding an attack placed later; a windowed scan recovers it (RESULTS.md, section 7) |
-| Split payloads | Four hand-made splits, no evasion shown; a test with innocent-looking fragments is still to do |
+| Padding (long inputs) | Tested on Laya: it silently drops everything after about 474 tokens, hiding an attack placed later; a windowed scan recovers it (RESULTS.md, section 7). The multilingual model reads 921 tokens and drops the rest, and the gateway's 1,200-character windows fit for the six languages tested (section 14) |
+| Split payloads | Four hand-made splits on the English model and eight more with innocent-looking fragments on the gateway: no evasion at message level, but one attack was missed when the whole conversation was scored as one text (RESULTS.md, sections 7 and 13) |
 | Gateway (rules, embedding classifier, validated scoring, windows, canaries) | Built on the multilingual model and evaluated on held-out groups (RESULTS.md, sections 8 and 9). The classifier cuts missed injections on the deepset test split from 14 to 3 of 60 but blocks more harmless messages. About half of harmless messages are escalated, and "escalate" has no reviewer yet. On a fresh benchmark the same pattern held (section 10) |
 | Fresh test of the frozen gateway | Run once on 200 prompts from a public benchmark (RESULTS.md, section 10): about 36% of benign prompts allowed against 4 to 5% of jailbreaks; the classifier blocks more of both (benign blocked 11% to 29%, jailbreaks blocked 44% to 66%) |
 | Resolving the escalate zone | Two attempts, a trained second look and a simple shrink rule, both passed on held-out data and failed on the fresh benchmark, so neither is adopted (RESULTS.md, sections 11 and 12). Escalate is still undecided and still has no reviewer |
-| Model version drift, key theft, cache poisoning | Not tested |
+| Model version drift | Simulated with Laya's two checkpoints: the reply's routing field names the model, 5 of 7 canaries failed under the swapped model, 11 of 71 decisions changed and no new attack was allowed (section 16) |
+| Key theft and rotation | A leak scan found nothing in files or git history; wrong, empty and restored keys behave correctly (fail closed, then recover) (section 17). A stolen key cannot be countered by the gateway; rotate it |
+| Cache poisoning | The gateway has no cache. A signed decision cache rejects edited, forged, moved and stale entries; it does not stop someone who has the key, and it does not cover a model swap (section 18) |
+| Signed replies | A prototype of provider-signed, request-bound replies rejected forgery, replay and stripped signatures; it is a stand-in for something the provider would have to offer (section 19) |
+| Reviewer for escalate | Not built |
+| Real Jev | Not tested |
 
-**Tamper after the answer:** a validator, a tamper proxy, canaries and fail-closed handling. Edits that break a reply's own arithmetic are caught; consistent forgeries and replays are not, and closing that gap needs replies signed by the provider. In the gateway, a forged reply cannot turn an attack that the rules recognise into "allow" (it drops to escalate at worst), but it can for an attack the rules miss. See `RESULTS.md`.
+**Tamper after the answer:** a validator, a tamper proxy, canaries and fail-closed handling. Edits that break a reply's own arithmetic are caught; consistent forgeries and replays are not, and closing that gap needs replies signed by the provider (a prototype of that is in section 19). In the gateway, a forged reply cannot turn an attack that the rules recognise into "allow" (it drops to escalate at worst), but it can for an attack the rules miss. See `RESULTS.md`.
 
 ## Important limits
 
@@ -34,6 +39,7 @@ A security test environment for Jev-compatible decision models.
 - The tamper tests use edits I wrote, 8 messages for the proxy test and one trial per failure mode. They show what the checks catch, not what a real attacker would try.
 - The gateway's held-out numbers come from one pre-chosen combination rule, with no confidence intervals. The deepset test split had been looked at, and several probe groups have only 4 to 22 messages. "Escalate" has no reviewer, so it is currently undecided, not safe.
 - The fresh test uses 100 benign and 100 jailbreak prompts from one benchmark, one sample and one seed. "Jailbreak" is not the same as "injection", and the benchmark overlaps with data used earlier. The two escalate-zone attempts were judged against rules fixed beforehand and rejected; the fresh sample has been used for three checks and should not be used again for tuning (sections 10 to 12).
+- The Hindi/Hinglish messages were written by me and not reviewed by a native reader, and the attack groups are mirrored pairs (section 15). Drift was simulated with two Laya checkpoints, and the signed-reply test is a prototype of something no provider offers today (sections 16 and 19).
 - The tamper and padding tests used Laya's English model; the injection-detection results and the gateway use the multilingual model.
 
 ## Setup (Windows, as used in development)
@@ -149,6 +155,20 @@ Never commit the token. The dataset is licensed cc-by-nc-4.0 (non-commercial).
 | `eval_second_look.py` | no | One-time check of the second look on held-out and fresh data against rules fixed beforehand (fails on fresh data) |
 | `zone_split.py` | no | Counts what is inside the training escalate zone, by kind |
 | `eval_shrink.py` | no | One-time check of the shrink rule on held-out and fresh data (fails on fresh data) |
+
+### More tests (RESULTS.md, sections 13 to 19)
+
+| Script | Needs the Laya server? | Purpose |
+|---|---|---|
+| `test_split_innocent.py` | yes (and Ollama) | Eight attacks split into innocent-looking fragments and four normal conversations; decisions per fragment and for the joined text |
+| `test_multilingual_window.py` | yes | Where the multilingual model stops reading (single requests, attack last in varied filler) |
+| `test_token_density.py` | yes | Tokens per character for six languages against the 921-token limit |
+| `probes_hi.py` | n/a | 50 Hindi/Hinglish test messages (data only; written by me, not reviewed by a native reader) |
+| `eval_hi.py` | yes (and Ollama) | Runs the frozen gateway on the Hindi/Hinglish set; caches scores in `results/hi_cache.jsonl` |
+| `test_drift.py` | yes | Simulated model swap: routing field, canaries and decision changes |
+| `test_key.py` | yes (and Ollama) | Leak scan of files and git history (counts only) and gateway behaviour with wrong, empty and restored keys |
+| `safe_cache.py` | yes (and Ollama) | Signed decision cache; run it directly for its eight-check self-test |
+| `test_signed.py` | yes | Prototype of signed, request-bound replies against forgery, replay and stripped signatures |
 
 Datasets are downloaded by the scripts, not stored here. Check each dataset's license before reuse.
 
