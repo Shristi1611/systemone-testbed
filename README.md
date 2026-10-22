@@ -6,6 +6,17 @@ A security test environment for Jev-compatible decision models.
 
 > **Status: work in progress** (hackathon entry, updated as it goes). Not affiliated with TypeSafe AI or the Laya authors.
 
+## Key findings
+
+All results below come from Laya, an open model that copies Jev's API, not from real Jev (see "What transfers to Jev").
+
+1. **Long inputs can hide attacks.** The English model silently ignores everything after about 474 tokens, and the multilingual model stops at 921. An attack placed after long filler goes unseen. Scanning in 1,200-character windows recovers it for the six languages tested.
+2. **Tampered replies are only partly catchable.** Edits that break a reply's own arithmetic are caught. Consistent forgeries and replays are not. A prototype of provider-signed, request-bound replies rejected forgery, replay and stripped signatures, but no provider offers this today.
+3. **Fail-open is covered.** Across 17 failure modes (timeouts, HTTP errors, truncated or malformed JSON), none ended as "allow".
+4. **Model swaps are detectable.** When one checkpoint was swapped for another, 5 of 7 canaries failed and 11 of 71 decisions changed, with no new attack allowed.
+5. **The gateway helps, with a cost.** The classifier cut missed injections from 14 to 3 of 60 on the deepset test split, but about half of harmless messages are escalated and "escalate" has no reviewer yet. On a fresh benchmark, about 36% of benign prompts were allowed against 4 to 5% of jailbreaks.
+6. **Known weak spot:** Devanagari attacks were mostly only escalated (1 of 10 blocked).
+
 ## What is tested, and what is not (yet)
 
 | Track | Status |
@@ -41,6 +52,22 @@ A security test environment for Jev-compatible decision models.
 - The fresh test uses 100 benign and 100 jailbreak prompts from one benchmark, one sample and one seed. "Jailbreak" is not the same as "injection", and the benchmark overlaps with data used earlier. The two escalate-zone attempts were judged against rules fixed beforehand and rejected; the fresh sample has been used for three checks and should not be used again for tuning (sections 10 to 12).
 - The Hindi/Hinglish messages were written by me and not reviewed by a native reader, and the attack groups are mirrored pairs (section 15). Drift was simulated with two Laya checkpoints, and the signed-reply test is a prototype of something no provider offers today (sections 16 and 19).
 - The tamper and padding tests used Laya's English model; the injection-detection results and the gateway use the multilingual model.
+
+## What transfers to Jev
+
+I could not test real Jev (it needs paid credits), so I used Laya, which copies Jev's API. Here is what I expect to carry over and what would need re-measuring.
+
+**Should carry over (logic does not depend on the model):**
+- The validator, which checks fields, model name, range and sum, argmax and recomputed confidence. This assumes Jev's reply has the same structure as Laya's; `smoke_test.py` is written to check that.
+- The tamper proxy and the fail-open tests (the fail-open tests use a fake server).
+- The windowed-scan idea and the allow / escalate / block structure.
+
+**Must be re-measured on Jev:**
+- Score cutoffs and the uncertain zone.
+- Canary answers and the canary schedule.
+- Error rates and all injection-detection numbers.
+- The input-length limit. The 474 and 921-token limits are Laya's. Jev's context window is reported as 32,000 tokens, so its limit should be measured, not assumed.
+- Drift behavior, which here was simulated with two Laya checkpoints.
 
 ## Setup (Windows, as used in development)
 
