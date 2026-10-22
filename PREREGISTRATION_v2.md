@@ -50,4 +50,4 @@ If any rule fails, v1 stays the gateway and the result is written up as it is.
 ## What we will not claim
 - Sealed results come from public English datasets, not from real traffic.
 - "Jailbreak" and "injection" are treated as the same thing: tries to override the assistant's rules.
-- Hindi/Hinglish results are not sealed tests, and the Hindi set is not reviewed by a native speaker.
+- Hindi/Hinglish results are not sealed tests.
