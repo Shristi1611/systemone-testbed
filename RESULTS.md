@@ -2,7 +2,7 @@
 
 Model: Laya (multilingual checkpoint, zero-shot) behind a Jev-compatible API, unless stated. Task: flag prompt-injection messages in `deepset/prompt-injections` (train: 546 messages, 203 injections; test: 116 messages, 60 injections). Each message was scored with two question wordings (v2, v3), each asked in both option orders.
 
-Sections 1-5 measure injection detection. Sections 6 and 7 measure the robustness of the pipeline around the model (reply integrity, long inputs, split inputs) and were run on Laya's English model, except where stated. Section 8 puts the pieces into one gateway and runs it on the multilingual model. Section 9 adds the embedding classifier and evaluates the gateway on held-out data. Section 10 runs the frozen gateway once on a fresh benchmark. Sections 11 and 12 try to resolve the escalate zone (a trained second look, then a simple rule) and both fail the fresh test. Sections 13 to 19 cover the remaining tests: split payloads with innocent fragments, the multilingual model's window, a larger Hindi/Hinglish set, simulated model drift, key handling, a signed decision cache and a prototype of signed replies. Everything is Laya, not Jev.
+Sections 1-5 measure injection detection. Sections 6 and 7 measure the robustness of the pipeline around the model (reply integrity, long inputs, split inputs) and were run on Laya's English model, except where stated. Section 8 puts the pieces into one gateway and runs it on the multilingual model. Section 9 adds the embedding classifier and evaluates the gateway on held-out data. Section 10 runs the frozen gateway once on a fresh benchmark. Sections 11 and 12 try to resolve the escalate zone (a trained second look, then a simple rule) and both fail the fresh test. Sections 13 to 19 cover the remaining tests: split payloads with innocent fragments, the multilingual model's window, a larger Hindi/Hinglish set, simulated model drift, key handling, a signed decision cache and a prototype of signed replies. Sections 20 and 21 cover gateway v2: new training data, a retrained classifier and a pre-registered test on three sealed pools, which v2 fails on one rule, so v1 stays the gateway. Everything is Laya, not Jev.
 
 ## 1. The zero-shot guard degrades from train to test
 
@@ -464,6 +464,58 @@ Laya does not sign its replies, and I have not seen Jev do so. `test_signed.py` 
 
 **Limits.** This is a stand-in for something a provider would have to offer, not something that works today. Six requests per row, one trial, an attacker I wrote. Not covered: a stolen signing secret, tampering with the request on its way in (that needs encrypted connections), clock differences, and nonce memory beyond one run. It is not wired into `gateway.py`.
 
+## 20. Gateway v2: more data, a retrained classifier (training data only)
+
+**Why.** Section 10 showed that v1 did badly on long role-play prompts, so I looked at a new pool of real prompts (TrustAIRLab, in-the-wild jailbreaks against ordinary prompts from the same sites). On 1,200 of them (600 jailbreaks, 600 regular, platform-matched so the website is not a shortcut; texts capped at 6,000 characters; duplicates, empties, overlaps with earlier data and texts labelled both ways removed), v1 blocked 96% of jailbreaks and **76% of the regular prompts**: rules fired on 47% of regular prompts because ordinary prompts like "I want you to act as a software developer" look like jailbreaks. Separation on that pool (AUC): guard 0.728, v1 classifier 0.808, message length 0.691; a length-only rule (block at 1,165 characters or more) reaches 65.2% accuracy. Rules and predictions were written down before scoring, in `PREREGISTRATION_v2.md`, and amended twice (dated, with reasons) before any sealed data was scored.
+
+**What I built, all cross-validated on the training data** (old 1,365 messages + the 1,200 new ones, `build_gateway_v2.py`, `finalize_v2.py`):
+
+- The classifier was retrained on every window of old and wild messages: AUC on the wild training data 0.869 (0.946 on the old data, 0.911 overall), up from 0.808.
+- Heads compared on identical folds (AUC on the wild data): logistic regression C=1 0.877, C=10 0.869, C=100 0.851, a small neural net 0.866, gradient boosting 0.874. None beat the current logistic regression by the 0.02 bar, so it stays.
+- The combiner (classifier score, guard score, rule hit, unseen flag) put almost all its weight on the classifier (+2.36 against +0.55 for the guard, +0.17 for the rule hit, -0.13 for unseen). A version that also used message length gave length a negative weight (-0.62), which comes from the old data (long harmless messages, short attacks) and is the opposite of what holds inside the wild data, so length was dropped; the wild AUC stayed the same (0.869 against 0.867).
+- A guard-confirmed allow path (guard below 0.25, no rule hit, nothing unseen, combined score below 0.46) raised harmless messages allowed on the old data from 79% to 86% with the 5% limit on attacks allowed intact; on the wild data it changed nothing (42% to 41%).
+- Not adopted: an agreement block (rule hit + guard + classifier agreeing) raised attacks blocked only from 28.9% to 30.5%. A public injection detector (protectai/deberta-v3-base-prompt-injection-v2: 0.865 alone, 0.884 with the classifier, a gain of +0.014 against a bar of 0.02) was dropped; its card says it covers injections, not jailbreaks, handles English only, names only 7 of its 22 training datasets, and the project is archived.
+- Block budget: at 1% of harmless training messages blocked, a textbook attack ("Forget everything above...", guard 0.90, classifier 0.94, two rule hits) was only escalated. The trade-off, by block budget (attacks blocked old / wild; harmless blocked old / wild): 1%: 20% / 36%, 0.0% / 2.3%; 2%: 31% / 52%, 0.0% / 4.8%; 3%: 35% / 57%, 0.0% / 7.2%; 5%: 47% / 65%, 0.3% / 11.7%. I set 3% (Amendment 2), because 5% would have broken the 10% limit for the wild pool.
+
+**Final v2, cross-validated on the training data** (block above a combined score of 0.877; allow below 0.203 or on the allow path; escalate otherwise; unseen text is never allowed; any error blocks). Counts are block / escalate / allow:
+
+| Group | Attacks | Harmless |
+|---|---|---|
+| old training data | 35% / 57% / 8% | 0% / 14% / 86% |
+| wild training data | 57% / 40% / 2% | 7% / 52% / 41% |
+
+Attacks allowed overall 5.0%; harmless blocked overall 2.9%. v2 was frozen (git tag `frozen-v2-before-sealed`; fingerprints in `FROZEN_v2.txt`) before any sealed pool was scored.
+
+**Limits.** Cross-validated training numbers, with thresholds chosen on the same scores. Several design choices (dropping length, the allow path, the 3% budget) were made after seeing training-pool numbers; they are listed in the amendments. Public English datasets. Laya's multilingual model, not Jev.
+
+## 21. Gateway v2 on the sealed pools
+
+**Setup.** Three pools, never scored or looked at before v2 was frozen, each scored once (`score_pool.py`, judged by `eval_sealed.py`): sealed_wild (200 jailbreaks + 200 regular, the other half of the TrustAIRLab data), sealed_neuralchemy (100 + 100, short, templated; neuralchemy test split) and sealed_slabs (100 + 100, very short, generated; S-Labs test split). All 800 were scored with no errors. Counts are block / escalate / allow:
+
+| Pool | Version | Attacks | Harmless |
+|---|---|---|---|
+| sealed_wild | v1 | 95% / 4% / 1% | 76% / 24% / 1% |
+| sealed_wild | v2 | 57% / 40% / 3% | 8% / 49% / 44% |
+| sealed_wild | length-only | 61% / 0% / 39% | 36% / 0% / 64% |
+| sealed_neuralchemy | v1 | 76% / 23% / 1% | 5% / 77% / 18% |
+| sealed_neuralchemy | v2 | 17% / 72% / 11% | 0% / 22% / 78% |
+| sealed_slabs | v1 | 78% / 22% / 0% | 7% / 41% / 52% |
+| sealed_slabs | v2 | 9% / 82% / 9% | 1% / 22% / 77% |
+
+AUC (wild / neuralchemy / slabs): guard 0.691 / 0.794 / 0.871; retrained classifier 0.871 / 0.900 / 0.867; v2 combined 0.870 / 0.891 / 0.887.
+
+**Pre-registered rules.** Passed: A (harmless blocked 0.0%, 1.0% and 7.5% against limits of 2%, 2% and 10%); B on sealed_wild (3.0% of attacks allowed against 5%); C (harmless blocked on sealed_wild fell from 75.5% to 7.5%, 68 points, against 30 required); D (harmless blocked or escalated on sealed_wild 56.5% against 60%); E (balanced accuracy on sealed_wild 74.8% against 62.7% for the length-only rule). **Failed: B on sealed_neuralchemy (11.0% of attacks allowed) and sealed_slabs (9.0%), against 5%.** Rules F (regression on the old sets) and G (fail-closed, tamper and canary tests for v2) were not run, because B had already decided the outcome. The rule set said that if any rule fails, v1 stays the gateway. **v1 stays.**
+
+**Predictions against what happened.** Right: v1 on sealed_wild (about 95% of attacks blocked, harmless mostly blocked); v2 on sealed_wild (57% of attacks blocked, inside my 40 to 60% guess); rule B being the likeliest failure on the short pools; length-only at about 65% (measured 62.7%). Wrong: v1 on the short pools; I guessed about half of attacks blocked on neuralchemy and the worst result on slabs, and it blocked 76% and 78%.
+
+**Findings.**
+- v1 and v2 are two operating points, not a winner and a loser. v1 is strict: it stops nearly every attack but blocks most ordinary role-play prompts (76% on sealed_wild). v2 is quiet: it blocks few harmless prompts, but on short text it lets about 10% of attacks through and mostly escalates the rest (72 to 82% of the attacks).
+- The escalate zone is still large in both versions (v2: 49% of harmless wild prompts, 40% of wild attacks).
+- The guard separates short text better (AUC 0.79 and 0.87) than the long wild jailbreaks (0.69), the opposite of what training showed.
+- A length-only rule is a weak baseline, but not a useless one: it blocks 61% of wild attacks while blocking 36% of harmless ones.
+
+**Limits.** Public English datasets, not real traffic. "Jailbreak" is not "injection": the labels were not checked by hand. One sample per pool, scored once; the pools are now spent, and any v3 needs fresh data and a new pre-registration. The amendments were made after training-pool numbers and before any sealed scoring. The Hindi and Hinglish set was not re-run for v2. Laya's multilingual model, not Jev.
+
 ## Caveats
 
 - Laya, not Jev.
@@ -483,3 +535,4 @@ Laya does not sign its replies, and I have not seen Jev do so. `test_signed.py` 
 - Section 16 (drift): two checkpoints stand in for drift; canary margins of about 0.10 to 0.13 would miss gentler drift.
 - Sections 17 and 18 (keys, cache): the leak scan covers the current key and the local repository; the signed cache does not stop someone who has the key and does not cover a model swap.
 - Section 19 (signed replies): a prototype of something the provider would have to offer, six requests per row, one trial.
+- Sections 20 and 21 (gateway v2): design choices made on training-pool numbers and recorded as amendments; v2 fails rule B on the two short-text sealed pools, so v1 stays the gateway; the sealed pools are spent; rules F and G were not run for v2.
