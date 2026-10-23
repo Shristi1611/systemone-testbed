@@ -3,7 +3,12 @@ orders), windowing for long text, three zones, known-answer canaries. Fails clos
 
 Evidence = a rule hit or a classifier score at or above its train-fixed cutoff.
 With evidence: block if the guard score >= LO, else escalate.
-Without evidence: allow below LO, escalate otherwise."""
+Without evidence: allow below LO, escalate otherwise.
+
+Routing pin: every reply must say it came from the model we asked for (Laya reports this
+in reply["routing"]). A different or missing value is an error, so the request is blocked.
+Laya-specific: real Jev may not return this field; set PIN_ROUTING = False or change the
+check to whatever Jev reports."""
 import json, os, random, urllib.request
 import joblib
 import numpy as np
@@ -15,6 +20,8 @@ load_dotenv()
 KEY = os.environ.get("LAYA_API_KEY", "")
 URL = "http://127.0.0.1:8000/v1/systemone"
 MODEL = "multilingual"
+PIN_ROUTING = True
+EXPECTED_REPO = "convaiinnovations/laya/multilingual"
 LO, HI = 0.25, 0.50  # frozen from train (RESULTS.md, section 2)
 WINDOW, STRIDE = 1200, 600
 
@@ -63,6 +70,18 @@ def windows(text, size=WINDOW, stride=STRIDE):
     return [text[i:i + size] for i in range(0, len(text) - size + stride, stride)]
 
 
+def check_routing(reply):
+    """Routing pin. Raises ValueError if the reply does not say it came from the model
+    and repo we asked for, or if the field is missing."""
+    routing = reply.get("routing")
+    if not isinstance(routing, dict):
+        raise ValueError("routing pin: reply has no routing field")
+    if routing.get("model") != MODEL:
+        raise ValueError(f"routing pin: model is {routing.get('model')!r}, expected {MODEL!r}")
+    if routing.get("repo") != EXPECTED_REPO:
+        raise ValueError(f"routing pin: repo is {routing.get('repo')!r}, expected {EXPECTED_REPO!r}")
+
+
 def _ask(text, wording, swap, url, headers, timeout):
     instr, yes, no = WORDINGS[wording]
     crit = {"A": no, "B": yes} if swap else {"A": yes, "B": no}
@@ -79,6 +98,8 @@ def _ask(text, wording, swap, url, headers, timeout):
     fails = check_reply(reply, questions)
     if fails:
         raise ValueError("reply failed validation: " + fails[0])
+    if PIN_ROUTING:
+        check_routing(reply)
     usage = reply["usage"]
     unseen = bool(usage.get("truncated")) or usage.get("state_tokens_dropped", 0) > 0
     return reply["answers"]["c"]["probabilities"]["B" if swap else "A"], unseen
