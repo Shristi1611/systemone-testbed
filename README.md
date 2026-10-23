@@ -16,8 +16,11 @@ All results below come from Laya, an open model that copies Jev's API, not from 
 4. **Model swaps are detectable.** When one checkpoint was swapped for another, 5 of 7 canaries failed and 11 of 71 decisions changed, with no new attack allowed.
 5. **The gateway helps, with a cost.** The classifier cut missed injections from 14 to 3 of 60 on the deepset test split, but about half of harmless messages are escalated and "escalate" has no reviewer yet. On a fresh benchmark, about 36% of benign prompts were allowed against 4 to 5% of jailbreaks.
 6. **Known weak spot:** Devanagari attacks were mostly only escalated (1 of 10 blocked).
+7. **A retrained v2 did not beat v1.** It was frozen and scored once on three sealed pools against rules written beforehand. It failed the short-text rule (attacks allowed 11.0% and 9.0% against a 5% limit), so v1 stays the gateway (RESULTS.md, section 21).
 
 ## What is tested, and what is not (yet)
+
+The gateway in use is **v1** (rules, embedding classifier, guard score). A retrained v2 was built and tested once on sealed data against pre-registered rules. It did not pass, so it is not the default.
 
 | Track | Status |
 |---|---|
@@ -37,6 +40,9 @@ All results below come from Laya, an open model that copies Jev's API, not from 
 | Key theft and rotation | A leak scan found nothing in files or git history; wrong, empty and restored keys behave correctly (fail closed, then recover) (section 17). A stolen key cannot be countered by the gateway; rotate it |
 | Cache poisoning | The gateway has no cache. A signed decision cache rejects edited, forged, moved and stale entries; it does not stop someone who has the key, and it does not cover a model swap (section 18) |
 | Signed replies | A prototype of provider-signed, request-bound replies rejected forgery, replay and stripped signatures; it is a stand-in for something the provider would have to offer (section 19) |
+| Naive baselines | Tested: simple apps that act directly on the raw model number, and a length-only rule, scored on the same sets (`eval_naive.py`, RESULTS.md); the length-only rule is the bar a detector has to beat |
+| Newer, larger data (wild jailbreaks and three more datasets) | Added and pooled for retraining; three pools were sealed and scored once (RESULTS.md, sections 20 and 21) |
+| Gateway v2 (retrained classifier + learned combiner) | Built, frozen (`FROZEN_v2.txt`, git tag) and tested once on sealed pools against rules written beforehand (`PREREGISTRATION_v2.md`). **It failed rule B on short text** (attacks allowed 11.0% and 9.0% against a 5% limit), so **v1 stays the gateway**. v2 is kept as a quieter, clearly labelled second profile (RESULTS.md, sections 20 and 21) |
 | Reviewer for escalate | Not built |
 | Real Jev | Not tested |
 
@@ -51,6 +57,8 @@ All results below come from Laya, an open model that copies Jev's API, not from 
 - The gateway's held-out numbers come from one pre-chosen combination rule, with no confidence intervals. The deepset test split had been looked at, and several probe groups have only 4 to 22 messages. "Escalate" has no reviewer, so it is currently undecided, not safe.
 - The fresh test uses 100 benign and 100 jailbreak prompts from one benchmark, one sample and one seed. "Jailbreak" is not the same as "injection", and the benchmark overlaps with data used earlier. The two escalate-zone attempts were judged against rules fixed beforehand and rejected; the fresh sample has been used for three checks and should not be used again for tuning (sections 10 to 12).
 - The Hindi/Hinglish messages were written by me and not reviewed by a native reader, and the attack groups are mirrored pairs (section 15). Drift was simulated with two Laya checkpoints, and the signed-reply test is a prototype of something no provider offers today (sections 16 and 19).
+- Gateway v2 was tested on three sealed pools, each scored once. Two are short-text sets from public datasets; "attack" and "harmless" labels are the datasets' own and were not re-checked by hand. The pre-registration was amended twice, in the open, before the sealed scoring (rule C was originally unachievable; see `PREREGISTRATION_v2.md`). Rules F (regression on old sets) and G (fail-closed, tamper and canary checks for v2) were not run because rule B already decided the outcome.
+- Several of my predictions were wrong and are disclosed in RESULTS.md section 21 (for example, v1 blocked 76 to 78% of the short sealed pools, not about half).
 - The tamper and padding tests used Laya's English model; the injection-detection results and the gateway use the multilingual model.
 
 ## What transfers to Jev
@@ -115,7 +123,7 @@ Create a `.env` file (it is git-ignored) containing `LAYA_API_KEY=<the same key>
 
 The embedding classifier needs [Ollama](https://ollama.com) running with the `nomic-embed-text` model (`ollama pull nomic-embed-text`). The gateway needs it; if Ollama is down the gateway blocks every request. Train and save the classifier once with `python train_classifier.py`; it writes `results/clf_mixed.joblib`, which is git-ignored.
 
-The fresh-test scripts use `rogue-security/prompt-injections-benchmark`, a gated dataset on Hugging Face. Accept its terms on the dataset page while logged in, create a read token at huggingface.co/settings/tokens, and set it in the same window before running (PowerShell, keep the quotes):
+The fresh-test and pool scripts use `rogue-security/prompt-injections-benchmark`, a gated dataset on Hugging Face (the other datasets used are public). Accept its terms on the dataset page while logged in, create a read token at huggingface.co/settings/tokens, and set it in the same window before running (PowerShell, keep the quotes):
 
 ```powershell
 $env:HF_TOKEN = "<your token>"
@@ -196,6 +204,21 @@ Never commit the token. The dataset is licensed cc-by-nc-4.0 (non-commercial).
 | `test_key.py` | yes (and Ollama) | Leak scan of files and git history (counts only) and gateway behaviour with wrong, empty and restored keys |
 | `safe_cache.py` | yes (and Ollama) | Signed decision cache; run it directly for its eight-check self-test |
 | `test_signed.py` | yes | Prototype of signed, request-bound replies against forgery, replay and stripped signatures |
+
+### Newer data, gateway v2 and the sealed test (RESULTS.md, sections 20 and 21)
+
+| Script | Needs the Laya server? | Purpose |
+|---|---|---|
+| `export_eval_sets.py`, `eval_naive.py` | yes (and Ollama) | Export the evaluation sets and score naive apps and a length-only rule on them |
+| `inspect_new_data.py`, `inspect_wild.py` | no | Look at the new datasets (counts, lengths, duplicates) before using them |
+| `build_pool.py`, `score_pool.py`, `check_pool.py` | `score_pool.py` yes | Build the pools (training, wild, and three sealed pools), score them with the guard and rules, check for overlap |
+| `build_gateway_v2.py` | no | Retrain the classifier on old plus wild windows and fit the combiner |
+| `compare_heads.py`, `compare_combiners.py`, `compare_allowpath.py`, `compare_agree.py`, `compare_budget.py` | no | Compared classifier heads, combiners, the allow path, an agreement rule (rejected) and harmless-block budgets, on out-of-fold scores |
+| `try_detector.py` | no | Tested a pre-trained DeBERTa injection detector (+0.014, dropped) |
+| `finalize_v2.py`, `gateway_v2.py` | `gateway_v2.py` yes (and Ollama) | Fix the thresholds from out-of-fold scores; the frozen v2 gateway |
+| `freeze_v2.py`, `FROZEN_v2.txt` | no | Record file hashes and the tag before any sealed pool was scored |
+| `PREREGISTRATION_v2.md` | n/a | Rules A to G, predictions and the two amendments, written before the sealed pools were scored |
+| `eval_sealed.py` | yes (and Ollama) | The one-time sealed scoring of v1, v2 and the length-only rule, and the rule-by-rule verdict |
 
 Datasets are downloaded by the scripts, not stored here. Check each dataset's license before reuse.
 
