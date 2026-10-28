@@ -1,4 +1,5 @@
 """Backend for the attack simulator. Run:  uvicorn server:app --port 9000
+Then open http://127.0.0.1:9000/  (index.html is served from this folder).
 Needs the Laya server on :8000 and Ollama on :11434.
 
 Two lanes on the same input:
@@ -7,8 +8,9 @@ Two lanes on the same input:
   gateway : gateway.Gateway (v1: rules + classifier + guard + windows + canaries + routing
             pin) wrapped in the conversation rule 'block_override'.
 One request at a time (Laya runs on a single CPU), so calls take a lock."""
-import json, threading, time, urllib.request
+import json, os, threading, time, urllib.error, urllib.request
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import gateway
 from conversation import decide_conversation
@@ -17,6 +19,7 @@ app = FastAPI(title="systemone-testbed simulator")
 LOCK = threading.Lock()
 GW = gateway.Gateway()
 NAIVE_CUTOFF = 0.5
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 class Conv(BaseModel):
@@ -46,18 +49,17 @@ def naive_lane(messages):
         return {"decision": "error", "score": None, "reason": f"{type(e).__name__}: {e}"}
 
 
+def _part(d):
+    return {"decision": d["decision"], "score": d.get("score"), "clf": d.get("clf"),
+            "hits": d.get("hits"), "reason": d.get("reason", "")}
+
+
 def gateway_lane(messages):
     r = decide_conversation(messages, GW.decide, "block_override")
     return {"decision": r["decision"],
-            "reason": r["reason"] if r["decision"] != "block" or r["joined"] is None
-            else (r["joined"].get("reason") or r["reason"]),
-            "per_message": [{"decision": d["decision"], "score": d.get("score"),
-                             "clf": d.get("clf"), "hits": d.get("hits"),
-                             "reason": d.get("reason", "")} for d in r["per_message"]],
-            "joined": None if r["joined"] is None else {
-                "decision": r["joined"]["decision"], "score": r["joined"].get("score"),
-                "clf": r["joined"].get("clf"), "hits": r["joined"].get("hits"),
-                "reason": r["joined"].get("reason", "")}}
+            "reason": r["reason"],
+            "per_message": [_part(d) for d in r["per_message"]],
+            "joined": None if r["joined"] is None else _part(r["joined"])}
 
 
 def _check(conv):
@@ -65,6 +67,11 @@ def _check(conv):
     if not msgs:
         raise HTTPException(400, "send at least one non-empty message")
     return msgs
+
+
+@app.get("/")
+def index():
+    return FileResponse(os.path.join(HERE, "index.html"))
 
 
 @app.get("/api/health")
