@@ -7,7 +7,7 @@
 <title>systemone-testbed</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     color-scheme: light;
@@ -327,6 +327,73 @@
   .opening p { max-width: 52ch; text-wrap: balance; }
   .badge { font-size: 14px; letter-spacing: .02em; padding: 7px 18px; margin-bottom: 26px; }
   .liquid { filter: blur(2.2px) saturate(1.05); transform: scale(1.04); }
+
+  /* ---- centred pages, one professional sans, simulator as a second page ---- */
+  :root { --head: "Inter Tight", "Inter", "Segoe UI", sans-serif; --body: "Inter", "Segoe UI", sans-serif; }
+  body { font-family: var(--body); }
+  h1, h2, h3 { font-family: var(--head); font-style: normal; font-weight: 600; letter-spacing: -0.035em; }
+  h2 { font-size: clamp(36px, 4.8vw, 64px); line-height: 1.04; margin-bottom: 16px; text-align: center; }
+  section h2::before, footer h2::before { margin-left: auto; margin-right: auto; }
+  .sub, section p { margin-left: auto; margin-right: auto; text-align: center; }
+  .sub { color: var(--muted); max-width: 58ch; margin-bottom: 44px; font-size: 17.5px; }
+  #statement p { font-family: var(--head); font-style: normal; font-weight: 500; font-size: clamp(26px, 3.6vw, 46px); line-height: 1.2; letter-spacing: -0.028em; max-width: 24em; margin: 0 auto; text-align: center; }
+  .carbar { justify-content: center; }
+  .carbar span { font-family: var(--body); font-size: 14px; font-weight: 400; color: var(--muted); margin-right: 14px; }
+  .face .meta h3 { font-family: var(--head); font-style: normal; font-weight: 600; font-size: 22px; line-height: 1.1; letter-spacing: -0.025em; }
+  .vinfo h3, .item h3 { font-family: var(--head); font-style: normal; font-weight: 600; letter-spacing: -0.03em; }
+  .vinfo h3 { font-size: clamp(28px, 3.2vw, 40px); line-height: 1.05; }
+  .item h3 { font-size: 22px; }
+  footer h2 { font-family: var(--head); font-style: normal; font-weight: 600; font-size: clamp(36px, 6vw, 76px); letter-spacing: -0.045em; line-height: 1; max-width: 16ch; }
+  .chips, .seg, .row { justify-content: center; }
+  .field, .minis { max-width: 900px; margin-left: auto; margin-right: auto; }
+  .field > div, .minis > div { text-align: center; }
+  .dots, .mrow { margin-left: auto; margin-right: auto; justify-content: center; }
+  .legend { justify-content: center; }
+  .readout, .field .readout { text-align: center; }
+  #queue { max-width: 720px; margin: 0 auto; }
+  .stat { text-align: center; margin-left: auto; margin-right: auto; }
+  .empty { border-left: 0; padding-left: 0; text-align: center; margin: 0 auto; }
+  .item { text-align: left; margin-left: auto; margin-right: auto; }
+  section .fine { margin-left: auto; margin-right: auto; text-align: center; }
+  /* simulator box on the main page */
+  .trybox { display: flex; align-items: center; justify-content: center; gap: 16px; max-width: 520px; margin: 40px auto 0; padding: 46px 32px; border-radius: 30px; text-decoration: none; color: #fff; font-family: var(--head); font-weight: 600; font-size: clamp(26px, 3.2vw, 36px); letter-spacing: -0.03em; background: rgba(255,255,255,.06); box-shadow: inset 0 1px 1px rgba(255,255,255,.22), 0 0 0 1px rgba(255,255,255,.13), 0 40px 80px -44px rgba(0,0,0,.85); backdrop-filter: blur(26px); -webkit-backdrop-filter: blur(26px); transition: transform .35s cubic-bezier(.2,.7,.2,1), background-color .25s ease; }
+  .trybox i { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #fff; color: #04140A; transition: transform .35s cubic-bezier(.2,.7,.2,1); }
+  .trybox:hover { transform: translateY(-5px); background: rgba(255,255,255,.1); } .trybox:hover i { transform: translateX(5px); }
+  .trybox:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  /* second page */
+  #tryPage[hidden] { display: none; }
+  #tryPage { position: relative; z-index: 1; padding: 120px 0 70px; min-height: 100vh; }
+  #tryPage .tp { text-align: center; }
+  .tgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 260px)); justify-content: center; gap: 22px; margin-top: 46px; }
+  .tcard { position: relative; display: block; aspect-ratio: 220 / 360; border-radius: 22px; overflow: hidden; text-decoration: none; color: #fff; text-align: left; box-shadow: 0 34px 64px -36px rgba(0,0,0,.95); transition: transform .35s cubic-bezier(.2,.7,.2,1), filter .25s ease; }
+  .tcard:hover { transform: translateY(-8px); filter: saturate(1.12) brightness(1.05); }
+  .tcard:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .tcard .art { position: absolute; inset: 0; } .tcard .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tcard .scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 58%; pointer-events: none; }
+  .tcard .meta { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 20px 22px; }
+  .tcard .tag { margin-bottom: 12px; background: rgba(255,255,255,.2); color: #fff; border-radius: 999px; padding: 4px 12px 4px 10px; display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .tcard .tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--dot, #fff); box-shadow: 0 0 0 1.5px #fff; }
+  .tcard .tag.k-ok { --dot: #34D96B; } .tcard .tag.k-no { --dot: #FF4B4B; } .tcard .tag.k-out::before { display: none; }
+  .tcard h3 { font-size: 24px; line-height: 1.08; margin: 0 0 8px; color: #fff; text-shadow: 0 1px 14px rgba(0,0,0,.28); }
+  .tcard p { font-size: 14.5px; line-height: 1.35; color: rgba(255,255,255,.9); margin: 0; text-align: left; }
+  .backlink { display: inline-flex; align-items: center; gap: 8px; color: rgba(255,255,255,.8); text-decoration: none; font-family: var(--head); font-weight: 500; font-size: 15px; padding: 8px 16px 8px 12px; border-radius: 999px; background: rgba(255,255,255,.07); box-shadow: inset 0 1px 1px rgba(255,255,255,.2), 0 0 0 1px rgba(255,255,255,.12); margin-bottom: 26px; }
+  .backlink:hover { color: #fff; background: rgba(255,255,255,.14); }
+  #tryRun h2 { margin-bottom: 30px; }
+  #tryRun .scene { max-width: 920px; margin: 0 auto; text-align: left; }
+  #tryRun .scene { background: rgba(7,9,8,.78); }
+  #simulator { padding-bottom: 130px; }
+
+  /* results: silk ribbons */
+  .rib svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .rib.mini { max-width: 520px; margin: 4px auto 0; }
+  .field { gap: 38px 44px; max-width: 1020px; }
+  .field > div { min-width: 0; }
+  .rbread { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 6px; }
+  .rbs { border-top: 3px solid var(--c); padding-top: 11px; text-align: center; }
+  .rbs b { display: block; font-family: var(--head); font-weight: 600; font-size: clamp(30px, 3.4vw, 46px); line-height: 1; letter-spacing: -0.045em; color: #fff; font-variant-numeric: tabular-nums; }
+  .rbs span { display: block; margin-top: 7px; font-size: 14px; color: var(--muted); }
+  .readout:empty { display: none; }
+  .minis .mlab { display: block; text-align: center; }
 </style>
 </head>
 <body>
@@ -378,25 +445,22 @@
   <div class="wrap carbar"><span>drag the row, or use the arrows</span><button class="nudge" id="nudgeDL" aria-label="Scroll left">&larr;</button><button class="nudge" id="nudgeDR" aria-label="Scroll right">&rarr;</button></div>
 </section>
 
-<section id="simulator" class="deep">
+<section id="simulator">
   <div class="wrap">
-    <h2>Drop one through</h2>
-    <p class="sub">Choose a message. Send it down the plain app's single gate, then turn the gateway on and watch where it stops. The attack cases were chosen after the plain app missed them.</p>
-    <div class="chips" id="chips"></div>
-    <div class="scene" id="scene"></div>
+    <h2>Simulator</h2>
+    <a class="trybox" href="#/try"><span>Try it out</span><i aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></i></a>
   </div>
 </section>
 
 <section id="results">
   <div class="wrap">
     <h2>What the numbers look like</h2>
-    <p class="sub">Each dot is one percent of a pool of short test messages. Switch the version and watch the dots change colour. This is the sealed test: scored once, against rules written down beforehand.</p>
+    <p class="sub">Each ribbon is a pool of short test messages, cut by what the gateway did with them. Switch the version and watch it re-cut. This is the sealed test: scored once, against rules written down beforehand.</p>
     <div class="seg" id="poolSeg"></div>
     <div class="seg" id="verSeg"></div>
-    <div class="legend"><span style="--c:var(--block)">blocked</span><span style="--c:var(--esc)">held for review</span><span style="--c:var(--allow)">allowed</span></div>
     <div class="field">
-      <div><h4>Attacks</h4><div class="dots" id="dotsA"></div></div>
-      <div><h4>Harmless messages</h4><div class="dots" id="dotsH"></div></div>
+      <div><h4>Attacks</h4><div class="rib" id="ribA"></div><div class="rbread" id="rdA"></div></div>
+      <div><h4>Harmless messages</h4><div class="rib" id="ribH"></div><div class="rbread" id="rdH"></div></div>
     </div>
     <div class="readout" id="readout"></div>
     <p class="fine" id="verdictLine"></p>
@@ -405,14 +469,14 @@
       <div>
         <h3>Missed injections, out of 60</h3>
         <p class="mlab">Held-out deepset split, 60 attacks.</p>
-        <div class="mrow" id="m1a"></div><span class="mlab">without the classifier: 14 missed</span>
-        <div class="mrow" id="m1b"></div><span class="mlab">with the classifier: 3 missed</span>
+        <div class="rib mini" id="m1a"></div><span class="mlab">without the classifier: 14 missed</span>
+        <div class="rib mini" id="m1b"></div><span class="mlab">with the classifier: 3 missed</span>
       </div>
       <div>
         <h3>Fresh benchmark, 100 prompts each</h3>
         <p class="mlab">Frozen gateway, run once.</p>
-        <div class="mrow" id="m2a"></div><span class="mlab">benign prompts allowed: about 36</span>
-        <div class="mrow" id="m2b"></div><span class="mlab">jailbreaks allowed: 4 to 5</span>
+        <div class="rib mini" id="m2a"></div><span class="mlab">benign prompts allowed: about 36</span>
+        <div class="rib mini" id="m2b"></div><span class="mlab">jailbreaks allowed: 4 to 5</span>
       </div>
     </div>
     <p class="fine" style="margin-top:36px">All of this ran on Laya, an open model that copies Jev's API, not on Jev. Several of my predictions were wrong; they are listed in RESULTS.md, section 21.</p>
@@ -428,6 +492,20 @@
   </div>
 </section>
 </main>
+
+<div id="tryPage" hidden>
+  <div class="wrap tp">
+    <div id="tryList">
+      <h2>Try it out</h2>
+      <div class="tgrid" id="tryGrid"></div>
+    </div>
+    <div id="tryRun" hidden>
+      <a class="backlink" href="#/try"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>All try-outs</a>
+      <h2 id="runTitle"></h2>
+      <div class="scene" id="scene"></div>
+    </div>
+  </div>
+</div>
 
 <div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-labelledby="vTitle">
   <div class="vback" data-close></div>
@@ -449,7 +527,7 @@
     <div class="wrap fin">
     <h2>Every attack, one gate.</h2>
     <p>Replay an attack from the cards, or send your own text through the gateway and watch where it stops.</p>
-    <div class="fbtns"><a class="gl" href="#attacks">Back to the attacks</a><a class="wt" href="#simulator">Open the simulator</a></div>
+    <div class="fbtns"><a class="gl" href="#attacks">Back to the attacks</a><a class="wt" href="#/try">Open the simulator</a></div>
     <p class="legal">Not affiliated with TypeSafe AI or the Laya authors. Numbers come from runs on a local Laya server. Results about Laya do not transfer to Jev without being measured again.</p>
   </div>
 </footer>
@@ -562,12 +640,12 @@ const DECKS = {
     title: a.t, gist: a.g, tag: a.tag, art: A_ART[i], pal: PAL[A_ART[i]], kind: "Attack",
     blocks: [["What happened", a.d]],
     acts: [a.gate != null ? { label: "See the layer that answers it", fn: () => openViewer("defenses", a.gate) } : null,
-           a.sim ? { label: "Replay it", solid: true, fn: () => { closeViewer(); pick(a.sim); $("#simulator").scrollIntoView({ behavior: "smooth" }); } } : null].filter(Boolean)
+           a.sim ? { label: "Try it in the simulator", solid: true, fn: () => { closeViewer(); location.hash = "#/try/" + a.sim; } } : null].filter(Boolean)
   })),
   defenses: GATES.map((g, i) => ({
     title: g.n, gist: g.s, tag: ["layer " + (i + 1) + " of 6", "k-out"], art: D_ART[i], pal: PAL[D_ART[i]], kind: "Defense",
     blocks: [["What it does", g.does], ["What beats it", g.beaten], ["What we measured", g.measured]],
-    acts: [{ label: "Try it in the simulator", solid: true, fn: () => { closeViewer(); pick("switch"); $("#simulator").scrollIntoView({ behavior: "smooth" }); } }]
+    acts: [{ label: "Try it in the simulator", solid: true, fn: () => { closeViewer(); location.hash = "#/try/switch"; } }]
   }))
 };
 
@@ -702,14 +780,9 @@ function verdict(kind, d) {
 }
 const PILL = { allow: "allowed", escalate: "held for review", block: "blocked", error: "error" };
 
-function buildChips() {
-  $("#chips").innerHTML = CASES.map((c) => `<button type="button" class="chip ${c.kind === "control" ? "ctl" : ""}" data-id="${c.id}" aria-pressed="false">${esc(c.title)}</button>`).join("");
-  $("#chips").addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (b) pick(b.dataset.id); });
-}
 function pick(id) {
   S.timers.forEach(clearTimeout); S.timers = [];
   S.cur = CASES.find((c) => c.id === id); S.data = null; S.step = 0; S.busy = false; S.src = "";
-  $$("#chips .chip").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === id)));
   renderScene();
 }
 function msgsHtml(c) {
@@ -830,31 +903,87 @@ const POOLS = {
 };
 const VERS = { v1: "v1 (the gateway in use)", v2: "v2 (retrained)", len: "length only (a baseline)" };
 const R = { pool: "wild jailbreaks", ver: "v1" };
-function dotsFor(c) {
-  const sum = c[0] + c[1] + c[2] || 1, b = Math.round(100 * c[0] / sum), e = Math.round(100 * (c[0] + c[1]) / sum) - b;
-  return Array.from({ length: 100 }, (_, i) => (i < b ? "b" : i < b + e ? "e" : "a"));
-}
 function seg(el, items, key) {
   $(el).innerHTML = Object.entries(items).map(([k, v]) => `<button type="button" class="chip" data-k="${esc(k)}" aria-pressed="${R[key] === k}">${esc(v)}</button>`).join("");
 }
-function paintDots(el, cls) {
-  const box = $(el);
-  if (!box.children.length) box.innerHTML = Array.from({ length: 100 }, () => "<i></i>").join("");
-  [...box.children].forEach((d, i) => { setTimeout(() => { d.className = cls[i]; }, i * 4); });
+
+/* silk ribbons: each pool is one ribbon, cut by what the gateway did with it */
+const STILLR = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const RC = { b: "#FF2D3A", e: "#FFB020", a: "#20D65A", track: "#3b403d" };
+const RIBS = []; let ribUid = 0;
+class Rib {
+  constructor(sel, o) {
+    this.host = $(sel); this.o = Object.assign({ W: 600, H: 196, th: 40, amp: 28, seed: 0, cols: [RC.b, RC.e, RC.a], mini: false }, o);
+    const u = ++ribUid, { W, H } = this.o; this.u = u;
+    this.host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label=""><defs>
+      <linearGradient id="rg${u}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0"></linearGradient>
+      <linearGradient id="rs${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".62"/><stop offset=".36" stop-color="#fff" stop-opacity=".08"/><stop offset=".62" stop-color="#000" stop-opacity=".02"/><stop offset="1" stop-color="#000" stop-opacity=".58"/></linearGradient>
+      <clipPath id="rc${u}"><path class="rcp"/></clipPath><filter id="rb${u}" x="-10%" y="-60%" width="120%" height="220%"><feGaussianBlur stdDeviation="${this.o.mini ? 9 : 16}"/></filter></defs>
+      <path class="rglow" fill="url(#rg${u})" filter="url(#rb${u})" opacity=".42"/><path class="rbody" fill="url(#rg${u})"/>
+      <g clip-path="url(#rc${u})"><path class="rshade" fill="url(#rs${u})"/><path class="rfold" fill="none" stroke="rgba(0,0,0,.30)" stroke-width="${this.o.mini ? 5 : 11}" stroke-linecap="round"/><path class="rspec" fill="none" stroke="rgba(255,255,255,.62)" stroke-width="${this.o.mini ? 1.6 : 3}" stroke-linecap="round"/></g></svg>`;
+    const q = (c) => this.host.querySelector(c);
+    this.grad = q("linearGradient"); this.p = { glow: q(".rglow"), body: q(".rbody"), clip: q(".rcp"), shade: q(".rshade"), fold: q(".rfold"), spec: q(".rspec") };
+    this.svg = q("svg"); this.tgt = this.cur = this.o.cols.map(() => 1 / this.o.cols.length); this.vis = false; this.rd = null; this.shown = [];
+    new IntersectionObserver((en) => { this.vis = en[0].isIntersecting; }, { rootMargin: "120px" }).observe(this.host);
+    RIBS.push(this);
+  }
+  readout(sel, labels) {
+    this.rd = $(sel);
+    this.rd.innerHTML = labels.map((l, i) => `<div class="rbs" style="--c:${this.o.cols[i]}"><b>0%</b><span>${l}</span></div>`).join("");
+    this.nums = [...this.rd.querySelectorAll("b")];
+  }
+  set(vals, label) {
+    const sum = vals.reduce((x, y) => x + y, 0) || 1; this.tgt = vals.map((v) => v / sum);
+    this.pct = this.tgt.map((v) => Math.round(100 * v)); if (label) this.svg.setAttribute("aria-label", label);
+    if (STILLR || !this.vis) { this.cur = this.tgt.slice(); this.paint(T0); }
+  }
+  geom(t) {
+    const { W, H, th, amp, seed } = this.o, n = Math.ceil(W / 6), top = [], bot = [], spec = [], fold = [];
+    const sm = (x) => x * x * (3 - 2 * x);
+    for (let i = 0; i <= n; i++) {
+      const x = i * W / n, yc = H / 2 + amp * Math.sin(x * 0.011 + t * 0.55 + seed) + amp * 0.35 * Math.sin(x * 0.027 - t * 0.8 + seed * 1.7);
+      const env = Math.max(0.05, sm(Math.min(1, x / 34)) * sm(Math.min(1, (W - x) / 34)));
+      const k = th * (0.8 + 0.26 * Math.sin(x * 0.018 + t * 0.7 + 1.3 + seed)) * env;
+      top.push(`${x.toFixed(1)} ${(yc - k).toFixed(1)}`); bot.push(`${x.toFixed(1)} ${(yc + k).toFixed(1)}`);
+      spec.push(`${x.toFixed(1)} ${(yc - k * (0.38 + 0.22 * Math.sin(x * 0.03 + t))).toFixed(1)}`); fold.push(`${x.toFixed(1)} ${(yc + k * 0.5).toFixed(1)}`);
+    }
+    const body = "M" + top.join("L") + "L" + bot.reverse().join("L") + "Z";
+    return { body, spec: "M" + spec.join("L"), fold: "M" + fold.join("L") };
+  }
+  paint(t) {
+    const g = this.geom(t); this.p.body.setAttribute("d", g.body); this.p.glow.setAttribute("d", g.body); this.p.clip.setAttribute("d", g.body); this.p.shade.setAttribute("d", g.body);
+    this.p.spec.setAttribute("d", g.spec); this.p.fold.setAttribute("d", g.fold);
+    const c = this.o.cols, s = 0.012; let acc = 0, st = [[c[0], 0]]; const last = this.cur.length - 1;
+    this.cur.forEach((v, i) => { acc += v; if (i < last) { st.push([c[i], Math.max(0, acc - s)]); st.push([c[i + 1], Math.min(1, acc + s)]); } });
+    st.push([c[last], 1]); let prev = 0;
+    this.grad.innerHTML = st.map(([col, off]) => { prev = Math.max(prev, off); return `<stop offset="${prev.toFixed(4)}" stop-color="${col}"/>`; }).join("");
+    if (this.rd) this.cur.forEach((v, i) => { const t = Math.round(100 * v) + "%"; if (this.nums[i].textContent !== t) this.nums[i].textContent = t; });
+  }
+  tick(t) {
+    const dt = Math.min(0.12, Math.max(0, t - (this.lt == null ? t : this.lt))); this.lt = t; const k = 1 - Math.exp(-dt * 7);
+    this.cur = this.cur.map((v, i) => { const d = this.tgt[i] - v; return Math.abs(d) > 0.0004 ? v + d * k : this.tgt[i]; });
+    this.paint(STILLR ? T0 : t);
+  }
 }
+const T0 = 3.2;
+(function ribLoop(now) { RIBS.forEach((r) => { if (r.vis) r.tick(now / 1000); }); requestAnimationFrame(ribLoop); })(0);
+const RIB = {
+  A: new Rib("#ribA", { seed: 0 }), H: new Rib("#ribH", { seed: 2.1 })
+};
+RIB.A.readout("#rdA", ["blocked", "held for review", "allowed"]); RIB.H.readout("#rdH", ["blocked", "held for review", "allowed"]);
 function renderResults() {
   const p = POOLS[R.pool]; if (!p[R.ver]) R.ver = "v1";
   seg("#poolSeg", Object.fromEntries(Object.keys(POOLS).map((k) => [k, k])), "pool");
   seg("#verSeg", Object.fromEntries(Object.keys(p).map((k) => [k, VERS[k]])), "ver");
-  const d = p[R.ver]; paintDots("#dotsA", dotsFor(d.a)); paintDots("#dotsH", dotsFor(d.h));
+  const d = p[R.ver]; RIB.A.set(d.a, `Attacks: ${d.a[0]}% blocked, ${d.a[1]}% held for review, ${d.a[2]}% allowed`); RIB.H.set(d.h, `Harmless messages: ${d.h[0]}% blocked, ${d.h[1]}% held for review, ${d.h[2]}% allowed`);
   const att = d.a, har = d.h;
   const asum = att[0] + att[1] + att[2], hsum = har[0] + har[1] + har[2];
   const allowed = (100 * att[2] / asum).toFixed(1), hblock = (100 * har[0] / hsum).toFixed(1);
-  let ro = `attacks: ${att[0]}% blocked · ${att[1]}% held · ${att[2]}% allowed<br>harmless: ${har[0]}% blocked · ${har[1]}% held · ${har[2]}% allowed`;
+  let ro = "";
   let vl = "";
   if (R.ver === "v2") {
     const ok = att[2] <= 5;
-    ro += `<br>rule B, attacks allowed at most 5%: ${allowed}% <span class="${ok ? "pass" : "fail"}">${ok ? "pass" : "fail"}</span>`;
+    ro = `rule B, attacks allowed at most 5%: ${allowed}% <span class="${ok ? "pass" : "fail"}">${ok ? "pass" : "fail"}</span>`;
     vl = ok ? "On this pool v2 stays inside the limit. On neuralchemy and S-Labs it does not (11.0% and 9.0% of attacks allowed against 5%), so the earlier gateway (v1) stays." : "Quieter on harmless text, but here it lets through more attacks than the limit written down beforehand. It failed, so the earlier gateway (v1) stays.";
   } else if (R.ver === "v1") vl = "v1 blocks almost every attack on these short texts, and also blocks or holds most harmless ones. That is the cost that made us try a retrained version.";
   else vl = "A rule that only looks at message length, the bar any detector has to beat.";
@@ -862,8 +991,8 @@ function renderResults() {
 }
 $("#poolSeg").addEventListener("click", (e) => { const b = e.target.closest("[data-k]"); if (b) { R.pool = b.dataset.k; renderResults(); } });
 $("#verSeg").addEventListener("click", (e) => { const b = e.target.closest("[data-k]"); if (b) { R.ver = b.dataset.k; renderResults(); } });
-function mini(el, n, lit, cls) { $(el).innerHTML = Array.from({ length: n }, (_, i) => `<i class="${i < lit ? cls : ""}"></i>`).join(""); }
-mini("#m1a", 60, 14, "b"); mini("#m1b", 60, 3, "b"); mini("#m2a", 100, 36, "a"); mini("#m2b", 100, 5, "b");
+function miniRib(sel, lit, total, color, seed) { const r = new Rib(sel, { W: 600, H: 66, th: 13, amp: 8, seed, mini: true, cols: [color, RC.track] }); r.set([lit, total - lit], `${lit} of ${total}`); return r; }
+miniRib("#m1a", 14, 60, RC.b, 0.4); miniRib("#m1b", 3, 60, RC.b, 1.6); miniRib("#m2a", 36, 100, RC.a, 2.8); miniRib("#m2b", 5, 100, RC.b, 4.1);
 
 /* ---------- review desk (this browser only) ---------- */
 let mem = [];
@@ -988,6 +1117,45 @@ if (BG) {
   }
 }
 
+
+/* ---------- second page: try-outs as cards, then the simulator for one case ---------- */
+const TRY = { open: false };
+const TRYMETA = {
+  switch: ["split", "A harmless first message hides the second."],
+  finish: ["steer", "Asks the model to finish a secret."],
+  pad20: ["pad", "The attack comes last, after 20 harmless sentences."],
+  pad40: ["order", "The same attack, after 40 sentences."],
+  recipe: ["cache", "A normal conversation. It should pass."],
+  email: ["conv", "Normal too, but the gateway holds it for review."],
+  custom: ["key", "Type your own messages and send them through."]
+};
+const KINDTAG = { attack: ["attack", "k-no"], control: ["normal message", "k-ok"], custom: ["your own", "k-out"] };
+function buildTryGrid() {
+  $("#tryGrid").innerHTML = CASES.map((c) => {
+    const [art, g] = TRYMETA[c.id], p = PAL[art], k = KINDTAG[c.kind];
+    return `<a class="tcard" href="#/try/${c.id}" style="background:${p[2]}"><div class="art">${coverOf(art)}</div><div class="scrim" style="background:linear-gradient(to top, ${p[2]} 0%, ${rgba(p[2], .86)} 34%, ${rgba(p[2], 0)} 100%)"></div><div class="meta"><span class="tag ${k[1]}">${k[0]}</span><h3>${esc(c.title)}</h3><p>${esc(g)}</p></div></a>`;
+  }).join("");
+}
+function route() {
+  const h = location.hash, m = h.match(/^#\/try(?:\/([\w-]+))?$/), main = $("main"), tp = $("#tryPage"), was = TRY.open;
+  if (m) {
+    TRY.open = true; main.hidden = true; tp.hidden = false;
+    const c = m[1] && CASES.find((x) => x.id === m[1]);
+    if (c) { pick(c.id); $("#runTitle").textContent = c.title; $("#tryList").hidden = true; $("#tryRun").hidden = false; }
+    else { S.timers.forEach(clearTimeout); S.timers = []; $("#tryList").hidden = false; $("#tryRun").hidden = true; }
+    scrollTo({ top: 0, behavior: "instant" });
+  } else {
+    TRY.open = false; main.hidden = false; tp.hidden = true;
+    if (was) {
+      CARS.forEach((c) => c.build());
+      let t = null; try { t = h.length > 1 ? document.querySelector(h) : null; } catch (e) {}
+      (t || $("#home")).scrollIntoView({ behavior: "instant" });
+    }
+  }
+  if (typeof onScroll === "function") onScroll();
+}
+addEventListener("hashchange", route);
+
 /* ---------- scroll: one orchestrated moment + a thin progress line ---------- */
 const nav = $("#nav"), inner = $("#openInner"), prog = $("#prog"), st = $("#stText");
 st.innerHTML = st.textContent.split(" ").map((w) => `<span class="w">${esc(w)}</span> `).join("");
@@ -1006,15 +1174,15 @@ function onScroll() {
   const r = st.getBoundingClientRect(), p = Math.max(0, Math.min(1, (vh * 0.85 - r.top) / (vh * 0.55 + r.height)));
   const n = words.length;
   words.forEach((w, i) => { const t = p * (n + 6) - i; w.style.opacity = still ? 1 : String(0.16 + 0.84 * Math.max(0, Math.min(1, t / 5))); });
-  let cur = 0; secs.forEach((s, i) => { if (s.getBoundingClientRect().top <= 120) cur = i; });
+  let cur = 0; if (!TRY.open) secs.forEach((s, i) => { if (s.getBoundingClientRect().top <= 120) cur = i; });
   if (y + vh >= doc.scrollHeight - 4) cur = secs.length - 1;
-  CUR = cur; links.forEach((a, i) => a.classList.toggle("on", i === cur)); nav.style.setProperty("--navacc", ["#FFFFFF", "#FF6B78", "#4ADE80", "#4ADE80", "#FBBF24", "#FF8FB1"][cur] || "#FFFFFF");
+  if (TRY.open) cur = 3; CUR = cur; links.forEach((a, i) => a.classList.toggle("on", i === cur)); nav.style.setProperty("--navacc", ["#FFFFFF", "#FF6B78", "#4ADE80", "#4ADE80", "#FBBF24", "#FF8FB1"][cur] || "#FFFFFF");
   ticking = false;
 }
 addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
 addEventListener("resize", onScroll);
 
-buildChips(); pick("switch"); renderResults(); renderQ(); initDecks(); onScroll();
+buildTryGrid(); pick("switch"); route(); renderResults(); renderQ(); initDecks(); onScroll();
 </script>
 </body>
 </html>
