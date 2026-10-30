@@ -270,7 +270,7 @@
   section, .deep { background: none; border-radius: 0; margin: 0; padding: 100px 0; position: relative; }
   section h2::before { content: ""; display: block; width: 54px; height: 6px; border-radius: 4px; background: var(--sand); box-shadow: 0 0 22px var(--sand); margin-bottom: 22px; }
   #attacks { --sand: #FF6B78; --forest: #FF6B78; } #defenses { --sand: #4ADE80; --forest: #4ADE80; }
-  #simulator { --sand: #4ADE80; --forest: #4ADE80; } #results { --sand: #FBBF24; --forest: #FBBF24; } #review { --sand: #FF8FB1; --forest: #FF8FB1; }
+  #simulator { --sand: #4ADE80; --forest: #4ADE80; } #results { --sand: #FBBF24; --forest: #FBBF24; }
   .carbar span { color: rgba(255,255,255,.8); }
   .nudge { background: rgba(255,255,255,.06); border: 0; box-shadow: inset 0 1px 1px rgba(255,255,255,.2), 0 0 0 1px rgba(255,255,255,.14); }
   .nudge:hover { background: rgba(255,255,255,.14); color: #fff; }
@@ -434,9 +434,8 @@
   .opening p { font-family: "Inter", "Segoe UI", sans-serif; font-weight: 400; font-size: clamp(12.5px, 1vw, 14.5px); letter-spacing: .04em; color: rgba(255,255,255,.52); margin-top: 20px; max-width: none; text-wrap: initial; text-shadow: none; }
 
   /* round 12: one theme. black sections, white accents, ribbon only on hero and footer */
-  #statement, #attacks, #defenses, #simulator, #results, #review, #tryPage, #resultsPage { background: #000; }
-  #attacks, #defenses, #simulator, #results, #review { --sand: #fff; --forest: #fff; }
-  #review.deep { background: #000; }
+  #statement, #attacks, #defenses, #simulator, #results, #tryPage, #resultsPage { background: #000; }
+  #attacks, #defenses, #simulator, #results { --sand: #fff; --forest: #fff; }
   .opening::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(180deg, rgba(0,0,0,0), #000); pointer-events: none; z-index: 1; }
   footer::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 240px; background: linear-gradient(180deg, #000, rgba(0,0,0,0)); pointer-events: none; z-index: -1; }
   footer .fin { position: relative; z-index: 1; }
@@ -463,7 +462,7 @@
   @media (prefers-reduced-motion: reduce) { .pvbolt, .pvhit, .pvg rect { animation: none; } .pvbolt { stroke-dashoffset: 0; } }
 
   /* round 14: standalone pages, cinematic simulator */
-  body.solo #nav { display: none; }
+  body.solo main, body.solo footer { display: none !important; }
   body.solo #tryPage, body.solo #resultsPage { padding-top: 56px; }
   #tryRun h2 { font-size: clamp(26px, 3.2vw, 38px); margin: 4px 0 26px; }
   #tryRun .scene { max-width: 1120px; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; padding: 0; border-radius: 0; }
@@ -512,7 +511,7 @@
   #heroCv { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 60; }
 
   /* round 15: layers as cards, compact so the next button stays on screen */
-  body.solo #tryPage, body.solo #resultsPage { padding-top: 26px; }
+  body.solo #tryPage, body.solo #resultsPage { padding-top: 92px; }
   #tryRun .backlink { margin: 0; }
   #tryRun h2 { font-size: clamp(24px, 2.8vw, 32px); margin: 10px 0 8px; }
   .stage .outcome { min-height: 58px; }
@@ -545,7 +544,6 @@
     <a href="#defenses">Defenses</a>
     <a href="#simulator">Simulator</a>
     <a href="#results">Results</a>
-    <a href="#review">Review desk</a>
   </div></div>
   <div id="prog"></div>
 </nav>
@@ -600,14 +598,6 @@
   </div>
 </section>
 
-<section id="review" class="deep">
-  <div class="wrap">
-    <h2>Review desk</h2>
-    <p class="sub">Requests the gateway could not settle wait here for a person. This is a prototype: decisions are kept in this browser only, and nothing learns from them yet.</p>
-    <p class="stat" id="revstat"></p>
-    <div id="queue"></div>
-  </div>
-</section>
 </main>
 
 <div id="resultsPage" hidden>
@@ -1306,7 +1296,6 @@ function showGateway(animate) {
     if (g.decision === "allow") hk.model(kind === "attack" ? "breach" : "safe");
     stFinal("G", { dec: g.decision, stopAt: Math.min(stopAt, GATES.length - 1), kind });
     $("#outG").innerHTML = outcomeHtml(kind, g.decision, "");
-    if (g.decision === "escalate" && !S.queued) { S.queued = true; addReview(S.cur.title, S.lastText || msgsOf(S.cur).join(" "), g.note || ""); $("#outG").insertAdjacentHTML("beforeend", `<p class="note">Added to the Review desk.</p>`); }
   };
   if (!animate) { apply(); return Promise.resolve(true); }
   hk.reset();
@@ -1503,26 +1492,6 @@ new Rib("#pvA", { W: 600, H: 120, th: 28, amp: 16, seed: 0.9 }).set([95, 4, 1], 
 new Rib("#pvH", { W: 600, H: 120, th: 28, amp: 16, seed: 2.2 }).set([75, 24, 1], "Harmless messages: 75% blocked, 24% held, 1% allowed");
 miniRib("#m1a", 14, 60, RC.b, 0.4); miniRib("#m1b", 3, 60, RC.b, 1.6); miniRib("#m2a", 36, 100, RC.a, 2.8); miniRib("#m2b", 5, 100, RC.b, 4.1);
 
-/* ---------- review desk (this browser only) ---------- */
-let mem = [];
-function loadQ() { try { const v = JSON.parse(localStorage.getItem("sot_review") || "null"); if (Array.isArray(v)) return v; } catch (e) {} return mem; }
-function saveQ(q) { mem = q; try { localStorage.setItem("sot_review", JSON.stringify(q)); } catch (e) {} }
-function addReview(title, text, note) { const q = loadQ(); q.unshift({ id: Date.now(), title, text, note, status: "waiting" }); saveQ(q); renderQ(); }
-function renderQ() {
-  const q = loadQ();
-  $("#revstat").textContent = `${q.filter((i) => i.status === "waiting").length} waiting · ${q.filter((i) => i.status === "approved").length} approved · ${q.filter((i) => i.status === "blocked").length} blocked`;
-  if (!q.length) { $("#queue").innerHTML = `<p class="empty">Nothing is waiting. Run “Email to a manager” in the simulator and turn the gateway on. It ends as held for review and appears here.</p>`; return; }
-  $("#queue").innerHTML = q.map((i) => `<div class="item ${i.status === "approved" ? "ok" : i.status === "blocked" ? "no" : ""}">
-    <h3>${esc(i.title)}</h3><p class="m">${esc(i.text.length > 240 ? i.text.slice(0, 240) + "…" : i.text)}</p>
-    <div class="detail">${esc(i.note).replace(/\n/g, "<br>")}</div>
-    <div class="row">${i.status === "waiting" ? `<button class="btn solid" data-r="approved" data-id="${i.id}">Approve</button><button class="btn" data-r="blocked" data-id="${i.id}">Block</button>` : `<span class="tag ${i.status === "approved" ? "k-ok" : "k-no"}">${i.status}</span>`}<button class="linkbtn" data-r="remove" data-id="${i.id}">Remove</button></div></div>`).join("");
-}
-$("#queue").addEventListener("click", (e) => {
-  const b = e.target.closest("button[data-r]"); if (!b) return;
-  let q = loadQ(); const id = Number(b.dataset.id);
-  q = b.dataset.r === "remove" ? q.filter((i) => i.id !== id) : q.map((i) => i.id === id ? { ...i, status: b.dataset.r } : i);
-  saveQ(q); renderQ();
-});
 
 
 /* ---------- liquid field: two colours, one seam (red attack, green defence) ---------- */
@@ -1685,7 +1654,7 @@ function route() {
     scrollTo({ top: 0, behavior: "instant" }); stLayout(); stKick();
   } else {
     stCancel();
-    TRY.open = false; main.hidden = false; tp.hidden = true; rp.hidden = true;
+    TRY.open = false; main.hidden = false; tp.hidden = true; rp.hidden = true; document.body.classList.remove("solo");
     if (was) {
       CARS.forEach((c) => c.build());
       let t = null; try { t = h.length > 1 ? document.querySelector(h) : null; } catch (e) {}
@@ -1731,7 +1700,7 @@ function onScroll() {
 addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
 addEventListener("resize", onScroll);
 
-buildTryGrid(); pick("switch"); route(); renderResults(); renderQ(); initDecks(); onScroll();
+buildTryGrid(); pick("switch"); route(); renderResults(); initDecks(); onScroll();
 </script>
 </body>
 </html>
