@@ -532,6 +532,23 @@
   .chain .nu { color: #fff; box-shadow: 0 0 0 1px rgba(255,255,255,.45); background: rgba(255,255,255,.07); }
   .msgp { max-width: 62ch; margin: 0 auto 16px; text-align: center; color: rgba(255,255,255,.86); font-size: 16px; line-height: 1.55; }
   .msgp .sentas { display: inline; color: rgba(255,255,255,.45); font-size: 14px; margin: 0; }
+
+  /* round 16: phones */
+  @media (max-width: 640px) {
+    nav .tabs { gap: 0; padding: 4px; }
+    nav .wrap { padding-left: 8px; padding-right: 8px; }
+    nav .tabs { width: 100%; justify-content: space-between; }
+    nav .tabs a { font-size: 12px; padding: 8px 7px; flex: 1 1 auto; text-align: center; }
+    .opening p { font-size: 14px; max-width: 30ch; padding: 0 12px; }
+    .stagewrap { overflow: visible; margin: 4px 0 0; padding: 0; }
+    .stage { min-width: 0; }
+    .stage .node, #tryRun .stage .node { width: 46px; font-size: 10px; }
+    .stage .node i, #tryRun .stage .node i { width: 28px; height: 28px; margin: 38px auto 6px; }
+    .stage .gate .gl, #tryRun .stage .gate .gl { width: 28px; height: 92px; border-radius: 16px; }
+    .stage .gate span { max-width: 100%; font-size: 9.5px; line-height: 1.15; overflow-wrap: anywhere; margin-top: 7px; }
+    #tryRun h2 { font-size: 22px; }
+    #tryPage .wrap, #resultsPage .wrap { padding-left: 16px; padding-right: 16px; }
+  }
 </style>
 </head>
 <body>
