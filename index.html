@@ -560,8 +560,8 @@
     <a href="#home" class="on">Home</a>
     <a href="#attacks">Attacks</a>
     <a href="#defenses">Defenses</a>
-    <a href="#simulator">Simulator</a>
-    <a href="#results">Results</a>
+    <a href="#/try" data-sec="#simulator">Simulator</a>
+    <a href="#/results" data-sec="#results">Results</a>
   </div></div>
   <div id="prog"></div>
 </nav>
@@ -1673,8 +1673,8 @@ function route() {
   } else {
     stCancel();
     TRY.open = false; main.hidden = false; tp.hidden = true; rp.hidden = true; document.body.classList.remove("solo");
-    if (was) {
-      CARS.forEach((c) => c.build());
+    {
+      if (was) CARS.forEach((c) => c.build());
       let t = null; try { t = h.length > 1 ? document.querySelector(h) : null; } catch (e) {}
       const tgt = t || $("#home"), jump = () => scrollTo({ top: Math.max(0, tgt.getBoundingClientRect().top + scrollY - 64), behavior: "instant" });
       jump(); requestAnimationFrame(jump); setTimeout(jump, 150); setTimeout(jump, 500);
@@ -1700,7 +1700,7 @@ const words = $$("#stText .w");
 [["someone can aim at it.", "rd"], ["built the layer that catches", "gn"], ["a plain app lets through.", "rd"]].forEach(([ph, c]) => {
   const tk = ph.split(" "); for (let i = 0; i + tk.length <= words.length; i++) if (tk.every((x, j) => words[i + j].textContent === x)) tk.forEach((_, j) => words[i + j].classList.add(c));
 });
-const links = $$("nav a"), secs = links.map((a) => document.querySelector(a.getAttribute("href")));
+const links = $$("nav a"), secs = links.map((a) => document.querySelector(a.dataset.sec || a.getAttribute("href")));
 const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let ticking = false;
 function onScroll() {
