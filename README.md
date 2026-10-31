@@ -4,7 +4,27 @@ A security test environment for Jev-compatible decision models.
 
 "System One" decision models (such as TypeSafe's Jev, or the open Laya models) return typed answers with probabilities (choice, score, yes/no) instead of text. Software then acts on those numbers, for example to allow, block or escalate a message. This project asks: **how can those decisions be wrong, and what should a layer around the model do about it?**
 
-> **Status: work in progress** (hackathon entry, updated as it goes). Not affiliated with TypeSafe AI or the Laya authors.
+> **Status: work in progress**, updated as it goes. Not affiliated with TypeSafe AI or the Laya authors.
+
+## The website
+
+A single-page site, `index.html`, shows the project as a story you can click through: **https://shristi1611.github.io/systemone-testbed/** (GitHub Pages).
+
+- **Attacks:** 23 attacks, one card each, with the layer that stops it.
+- **Defenses:** the six layers of the gateway (rules, classifier, four-way score, conversation rule, reply checks, canaries and fail-closed).
+- **Simulator:** 28 try-outs. Each one plays a plain Jev-style app first, then the same message through the gateway, with green for an attack stopped and red for an attack that got through or a normal message wrongly blocked. You can also type your own text.
+- **Results:** ribbon charts of what the gateway did with attacks and harmless messages, by test pool and gateway version.
+
+**What the hosted site shows.** The hosted page cannot reach a model, so it plays *recorded* results. Some of those are illustrated from the measured numbers in `RESULTS.md` and are labelled "illustrated from our measured results, not a live run". Where the plain app was never measured on a case, the page says "not measured". Section 22 of `RESULTS.md` lists, card by card, what was measured and what was drawn from it.
+
+**Running it live (Windows, with the Laya server and Ollama up, as in Setup below):**
+
+```bat
+pip install fastapi uvicorn
+uvicorn server:app --port 9000
+```
+
+Then open `http://127.0.0.1:9000/`. `server.py` serves `index.html` and answers the simulator's Run step with two lanes on the same input: a plain app (one Laya question, cutoff 0.5, no checks) and the gateway. It needs `gateway.py` and `conversation.py` in the same folder and handles one request at a time. If the server is not running, the page falls back to the recorded results.
 
 ## Key findings
 
@@ -132,6 +152,13 @@ $env:HF_TOKEN = "<your token>"
 Never commit the token. The dataset is licensed cc-by-nc-4.0 (non-commercial).
 
 ## Scripts
+
+### Website
+
+| File | Needs the Laya server? | Purpose |
+|---|---|---|
+| `index.html` | no | The whole site in one file: attacks, defenses, simulator, results. Plays recorded results when no server is running |
+| `server.py` | yes (and Ollama) | Local backend for the simulator's live run: a plain-app lane and a gateway lane on the same input. Run with `uvicorn server:app --port 9000` |
 
 ### Injection detection
 
