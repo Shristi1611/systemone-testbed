@@ -2,7 +2,7 @@
 
 Model: Laya (multilingual checkpoint, zero-shot) behind a Jev-compatible API, unless stated. Task: flag prompt-injection messages in `deepset/prompt-injections` (train: 546 messages, 203 injections; test: 116 messages, 60 injections). Each message was scored with two question wordings (v2, v3), each asked in both option orders.
 
-Sections 1-5 measure injection detection. Sections 6 and 7 measure the robustness of the pipeline around the model (reply integrity, long inputs, split inputs) and were run on Laya's English model, except where stated. Section 8 puts the pieces into one gateway and runs it on the multilingual model. Section 9 adds the embedding classifier and evaluates the gateway on held-out data. Section 10 runs the frozen gateway once on a fresh benchmark. Sections 11 and 12 try to resolve the escalate zone (a trained second look, then a simple rule) and both fail the fresh test. Sections 13 to 19 cover the remaining tests: split payloads with innocent fragments, the multilingual model's window, a larger Hindi/Hinglish set, simulated model drift, key handling, a signed decision cache and a prototype of signed replies. Sections 20 and 21 cover gateway v2: new training data, a retrained classifier and a pre-registered test on three sealed pools, which v2 fails on one rule, so v1 stays the gateway. Everything is Laya, not Jev.
+Sections 1-5 measure injection detection. Sections 6 and 7 measure the robustness of the pipeline around the model (reply integrity, long inputs, split inputs) and were run on Laya's English model, except where stated. Section 8 puts the pieces into one gateway and runs it on the multilingual model. Section 9 adds the embedding classifier and evaluates the gateway on held-out data. Section 10 runs the frozen gateway once on a fresh benchmark. Sections 11 and 12 try to resolve the escalate zone (a trained second look, then a simple rule) and both fail the fresh test. Sections 13 to 19 cover the remaining tests: split payloads with innocent fragments, the multilingual model's window, a larger Hindi/Hinglish set, simulated model drift, key handling, a signed decision cache and a prototype of signed replies. Sections 20 and 21 cover gateway v2: new training data, a retrained classifier and a pre-registered test on three sealed pools, which v2 fails on one rule, so v1 stays the gateway. Section 22 describes the website and which of its cards are measured and which are illustrated. Everything is Laya, not Jev.
 
 ## 1. The zero-shot guard degrades from train to test
 
@@ -516,6 +516,43 @@ AUC (wild / neuralchemy / slabs): guard 0.691 / 0.794 / 0.871; retrained classif
 
 **Limits.** Public English datasets, not real traffic. "Jailbreak" is not "injection": the labels were not checked by hand. One sample per pool, scored once; the pools are now spent, and any v3 needs fresh data and a new pre-registration. The amendments were made after training-pool numbers and before any sealed scoring. The Hindi and Hinglish set was not re-run for v2. Laya's multilingual model, not Jev.
 
+## 22. The website: what its cards show and where the numbers come from
+
+`index.html` presents sections 1 to 21 as a site with 23 attack cards, six defence layers, 28 simulator try-outs and a results page. It adds no new measurements. This section says how each part relates to the sections above, so a reader can check a card against its source.
+
+**Where each attack card comes from.**
+
+| Card | Source |
+|---|---|
+| Steering text | Sections 1 to 5 and 9 |
+| Split across messages; Word game; Assembly; Story robot; Hinglish story; Translate then obey; Hinglish split | Section 13 (and section 7 for the first split test) |
+| Buried in padding; Long text in other languages | Sections 7 and 14 |
+| Option-order bias; Yes/no flip | Section 5 (and the side observation in section 6) |
+| Tampered replies; Fail-open | Section 6 |
+| Forgery and replay | Sections 6 and 19 |
+| Canary-aware forger | Sections 6 and 8 |
+| Model swap | Section 16 |
+| Key theft | Section 17 |
+| Cache poisoning | Section 18 |
+| Hindi and Hinglish | Section 15 |
+| Threshold edge | Sections 2 and 9 |
+| Jailbreak prompts | Sections 10, 20 and 21 |
+| Hidden characters | Section 8 (the zero-width demonstration) |
+
+**How the simulator gets its results.** Each try-out has a recorded result stored in the page. When the local server is running (`server.py`), the Run step sends the text to a plain-app lane (one Laya question, wording v3, cutoff 0.5, no checks) and to the gateway, and shows what comes back. When the server cannot be reached, as on the hosted site, the page plays the recorded result instead. The recorded results were taken from the sections above or written to match them. A try-out marked "illustrated from our measured results, not a live run" was not a fresh run. Where the plain app was never measured on a case, the page shows "not measured" and skips that animation.
+
+**What was drawn, not measured.**
+- **Hindi and Hinglish:** the plain app is shown as blocking. Section 15 measured guard scores of 0.75 to 0.93 on the Devanagari attacks, above the plain app's 0.5 cutoff, so a plain app would probably block them, but the plain app was not run on this set. An earlier version of the site showed "allow", which was wrong.
+- **Option-order and cache cards:** which layer stops the attack in the animation was chosen by me for illustration. Section 5 measured the option-order effect at the model level, and the cache in section 18 is not part of the gateway.
+- **The six split cases:** section 13 did not record whether the rules, the classifier or the guard fired for each fragment, and the plain app was not measured on them. The layer shown is my choice.
+- **Padding and other try-outs with a fixed result:** the numbers shown come from the sections above; the animation is an illustration.
+
+**The results page.** The ribbons show, for the three sealed pools of section 21 (wild jailbreaks, neuralchemy, S-Labs) and three versions (v1, v2, a length-only rule), the share of attacks and of harmless messages blocked, held for review and allowed. Two more ribbons show the missed injections out of 60 without and with the classifier (14 and 3, section 9) and the fresh benchmark of section 10 (about 36 benign prompts allowed; 4 to 5 jailbreaks allowed). These figures were typed into `index.html` by hand; they are not generated from the result files. One difference: the page shows 75% of harmless wild prompts blocked by v1, where the section 21 table shows 76% (151 of 200 is 75.5%, rounded differently).
+
+**Colours.** Green means an attack was stopped, red means an attack was allowed or a normal message was wrongly blocked, and amber means held for review. "Held for review" is still undecided: escalate has no reviewer (sections 11 and 12). An earlier version of the site had a Review desk page; it was removed because it did not decide anything.
+
+**Limits.** The site was checked in a desktop browser, including at phone width, but not on a real phone or a real GPU, and the full-screen animation was only seen on a desktop browser. Everything is Laya, not Jev, and the demonstration cases were written or illustrated by me.
+
 ## Caveats
 
 - Laya, not Jev.
@@ -536,3 +573,4 @@ AUC (wild / neuralchemy / slabs): guard 0.691 / 0.794 / 0.871; retrained classif
 - Sections 17 and 18 (keys, cache): the leak scan covers the current key and the local repository; the signed cache does not stop someone who has the key and does not cover a model swap.
 - Section 19 (signed replies): a prototype of something the provider would have to offer, six requests per row, one trial.
 - Sections 20 and 21 (gateway v2): design choices made on training-pool numbers and recorded as amendments; v2 fails rule B on the two short-text sealed pools, so v1 stays the gateway; the sealed pools are spent; rules F and G were not run for v2.
+- Section 22 (website): the cards add no measurements; some recorded results are illustrated from measured numbers, a few layers shown were chosen by me, and the results-page figures were typed by hand.
